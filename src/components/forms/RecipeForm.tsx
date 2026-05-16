@@ -59,6 +59,22 @@ export function RecipeForm({ initialRecipe, onCancel, onSaved }: RecipeFormProps
       </div>
 
       <div className="mt-6 flex flex-col gap-5">
+        <ImageUploadInput
+          cropMode="display"
+          description="This optional image appears on recipe cards and search results."
+          error={errors.previewImage}
+          images={previewImageDrafts}
+          multiple={false}
+          previewAspectClass="aspect-[4/3]"
+          title="Display preview image"
+          uploadLabel="One display image"
+          cameraLabel="Capture one"
+          onAddFiles={(files) => addImageFiles('preview', files)}
+          onCropImage={(tempId, cropArea) => cropImage('preview', tempId, cropArea)}
+          onMoveImage={(tempId, direction) => moveImage('preview', tempId, direction)}
+          onRemoveImage={(tempId) => removeImage('preview', tempId)}
+        />
+
         <TextInput
           label="Title"
           value={title}
@@ -74,23 +90,11 @@ export function RecipeForm({ initialRecipe, onCancel, onSaved }: RecipeFormProps
         />
 
         <ImageUploadInput
-          description="This optional image appears on recipe cards and search results."
-          error={errors.previewImage}
-          images={previewImageDrafts}
-          multiple={false}
-          title="Display preview image"
-          uploadLabel="One display image"
-          cameraLabel="Capture one"
-          onAddFiles={(files) => addImageFiles('preview', files)}
-          onCropImage={(tempId, cropArea) => cropImage('preview', tempId, cropArea)}
-          onMoveImage={(tempId, direction) => moveImage('preview', tempId, direction)}
-          onRemoveImage={(tempId) => removeImage('preview', tempId)}
-        />
-
-        <ImageUploadInput
+          cropMode="recipe"
           description="These images appear only in the full recipe gallery."
           error={errors.images}
           images={imageDrafts}
+          previewAspectClass="aspect-[4/3]"
           title="Recipe gallery images"
           uploadLabel="Multiple photos"
           cameraLabel="Phone capture"

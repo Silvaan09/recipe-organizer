@@ -3,10 +3,13 @@ import { useState } from 'react';
 
 import type { ImageDraft } from '../../hooks/useRecipeForm';
 import type { ImageCropArea } from '../../services/image';
+import { cn } from '../../utils/cn';
+import { toImageObjectPosition } from '../../utils/imagePosition';
 import { ImageCropDialog } from './ImageCropDialog';
 
 type ImageUploadInputProps = {
   cameraLabel?: string;
+  cropMode?: 'display' | 'recipe';
   description?: string;
   error?: string;
   images: ImageDraft[];
@@ -15,12 +18,14 @@ type ImageUploadInputProps = {
   onCropImage: (tempId: string, cropArea: ImageCropArea) => Promise<void>;
   onMoveImage: (tempId: string, direction: 'left' | 'right') => void;
   onRemoveImage: (tempId: string) => void;
+  previewAspectClass?: string;
   title?: string;
   uploadLabel?: string;
 };
 
 export function ImageUploadInput({
   cameraLabel = 'Phone capture',
+  cropMode = 'recipe',
   description = 'Multiple images are welcome',
   error,
   images,
@@ -29,6 +34,7 @@ export function ImageUploadInput({
   onCropImage,
   onMoveImage,
   onRemoveImage,
+  previewAspectClass = 'aspect-square',
   title = 'Images',
   uploadLabel = 'Multiple photos',
 }: ImageUploadInputProps) {
@@ -91,7 +97,10 @@ export function ImageUploadInput({
                 <img
                   src={image.previewUrl}
                   alt={image.alt}
-                  className="aspect-square w-full object-cover"
+                  className={cn(previewAspectClass, 'w-full object-cover')}
+                  style={{
+                    objectPosition: toImageObjectPosition(image.previewImagePosition),
+                  }}
                 />
                 {image.status === 'processing' ? (
                   <div className="absolute inset-0 grid place-items-center bg-white/70 text-xs font-bold text-petal-700 backdrop-blur-sm">
@@ -149,6 +158,7 @@ export function ImageUploadInput({
 
       {croppingImage ? (
         <ImageCropDialog
+          cropMode={cropMode}
           image={croppingImage}
           onApply={(cropArea) => onCropImage(croppingImage.tempId, cropArea)}
           onClose={() => setCroppingImage(undefined)}

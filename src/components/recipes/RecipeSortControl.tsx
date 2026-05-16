@@ -1,21 +1,39 @@
-import type { RecipeSortMode } from '../../types/sort';
+import { ArrowDown, ArrowUp } from 'lucide-react';
+
+import type { RecipeSortMode, RecipeSortState } from '../../types/sort';
 
 type RecipeSortControlProps = {
-  onChange: (sortMode: RecipeSortMode) => void;
-  value: RecipeSortMode;
+  onChange: (sortState: RecipeSortState) => void;
+  value: RecipeSortState;
 };
 
 const sortOptions = [
   { label: 'A-Z', value: 'alphabetical' },
-  { label: 'Used', value: 'recentlyUsed' },
-  { label: 'New', value: 'recentlyCreated' },
+  { label: 'Creation Date', value: 'recentlyCreated' },
+  { label: 'Recently Cooked', value: 'recentlyUsed' },
 ] satisfies Array<{ label: string; value: RecipeSortMode }>;
 
 export function RecipeSortControl({ onChange, value }: RecipeSortControlProps) {
+  function handleSortClick(sortMode: RecipeSortMode) {
+    if (value.mode === sortMode) {
+      onChange({
+        mode: sortMode,
+        direction: value.direction === 'asc' ? 'desc' : 'asc',
+      });
+      return;
+    }
+
+    onChange({
+      mode: sortMode,
+      direction: sortMode === 'alphabetical' ? 'asc' : 'desc',
+    });
+  }
+
   return (
     <div className="grid grid-cols-3 gap-2 rounded-lg bg-white p-1 shadow-soft">
       {sortOptions.map((option) => {
-        const isActive = value === option.value;
+        const isActive = value.mode === option.value;
+        const DirectionIcon = value.direction === 'asc' ? ArrowUp : ArrowDown;
 
         return (
           <button
@@ -27,9 +45,12 @@ export function RecipeSortControl({ onChange, value }: RecipeSortControlProps) {
                 : 'min-h-11 rounded-md px-3 text-sm font-semibold text-cocoa-700 transition hover:bg-petal-50'
             }
             aria-pressed={isActive}
-            onClick={() => onChange(option.value)}
+            onClick={() => handleSortClick(option.value)}
           >
-            {option.label}
+            <span className="inline-flex items-center justify-center gap-1.5">
+              <span>{option.label}</span>
+              {isActive ? <DirectionIcon aria-hidden="true" size={14} strokeWidth={2.6} /> : null}
+            </span>
           </button>
         );
       })}

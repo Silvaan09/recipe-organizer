@@ -1,5 +1,7 @@
-import { getAllRecipeImages, getAllRecipes, replaceLocalDatabase } from '../../db';
+import { getAllRecipeImages, getAllStoredRecipes, replaceLocalDatabase } from '../../db';
+import { isSyncStatus, normalizeSyncMetadata } from '../sync';
 import type { Recipe, RecipeImage } from '../../types/recipe';
+import type { SyncMetadata } from '../../types/sync';
 import { getLocalRecipeImage } from '../../utils/recipeImages';
 import {
   assertUniqueIds,
@@ -11,7 +13,7 @@ import {
 const BACKUP_FORMAT = 'recipe-organizer.backup';
 const BACKUP_VERSION = 1;
 
-type BackupImageRecord = {
+type BackupImageRecord = Partial<SyncMetadata> & {
   id: string;
   recipeId: string;
   fileName: string;
@@ -68,6 +70,16 @@ function validateBackupImage(value: unknown): BackupImageRecord {
     size: image.size,
     createdAt: image.createdAt,
     dataBase64: image.dataBase64,
+    ...normalizeSyncMetadata(
+      {
+        deletedAt: typeof image.deletedAt === 'string' ? image.deletedAt : undefined,
+        lastSyncedAt: typeof image.lastSyncedAt === 'string' ? image.lastSyncedAt : undefined,
+        localUpdatedAt:
+          typeof image.localUpdatedAt === 'string' ? image.localUpdatedAt : image.createdAt,
+        syncStatus: isSyncStatus(image.syncStatus) ? image.syncStatus : 'local-only',
+      },
+      image.createdAt,
+    ),
   };
 }
 
@@ -201,7 +213,7 @@ function readTextFile(file: File): Promise<string> {
 }
 
 export async function createBackupFile(): Promise<BackupFile> {
-  const [recipes, images] = await Promise.all([getAllRecipes(), getAllRecipeImages()]);
+  const [recipes, images] = await Promise.all([getAllStoredRecipes(), getAllRecipeImages()]);
   const storedImageById = new Map(images.map((image) => [image.id, image]));
   const exportedImageIds = new Set<string>();
   const backupImages = await Promise.all(
@@ -240,6 +252,8 @@ export async function createBackupFile(): Promise<BackupFile> {
           mimeType: blob.type || 'image/svg+xml',
           size: blob.size,
           createdAt: recipe.createdAt,
+          localUpdatedAt: recipe.localUpdatedAt,
+          syncStatus: recipe.syncStatus,
         });
       }),
     ),
@@ -263,6 +277,10 @@ async function createBackupImageRecord(image: RecipeImage): Promise<BackupImageR
     size: image.size,
     createdAt: image.createdAt,
     dataBase64: await blobToBase64(image.blob),
+    deletedAt: image.deletedAt,
+    lastSyncedAt: image.lastSyncedAt,
+    localUpdatedAt: image.localUpdatedAt,
+    syncStatus: image.syncStatus,
   };
 }
 
@@ -304,6 +322,7 @@ export async function validateBackupFile(file: File): Promise<ValidatedBackup> {
     mimeType: image.mimeType,
     size: image.size,
     createdAt: image.createdAt,
+    ...normalizeSyncMetadata(image, image.createdAt),
   }));
   images.forEach((image) => {
     const validation = validateRecipeImage(image);

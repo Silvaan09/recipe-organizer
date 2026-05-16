@@ -1,5 +1,5 @@
 import type { Recipe } from '../types/recipe';
-import type { RecipeSortMode } from '../types/sort';
+import type { RecipeSortMode, RecipeSortState } from '../types/sort';
 
 export function matchesRecipeSearch(recipe: Recipe, query: string) {
   const normalizedQuery = query.trim().toLocaleLowerCase();
@@ -14,17 +14,30 @@ export function matchesRecipeSearch(recipe: Recipe, query: string) {
     .includes(normalizedQuery);
 }
 
-export function sortRecipes(recipes: Recipe[], sortMode: RecipeSortMode) {
+export function sortRecipes(
+  recipes: Recipe[],
+  sort: RecipeSortMode | RecipeSortState,
+) {
+  const sortState: RecipeSortState =
+    typeof sort === 'string'
+      ? {
+          direction: sort === 'alphabetical' ? 'asc' : 'desc',
+          mode: sort,
+        }
+      : sort;
+
   return [...recipes].sort((firstRecipe, secondRecipe) => {
-    if (sortMode === 'alphabetical') {
-      return firstRecipe.title.localeCompare(secondRecipe.title);
+    let result: number;
+
+    if (sortState.mode === 'alphabetical') {
+      result = firstRecipe.title.localeCompare(secondRecipe.title);
+    } else if (sortState.mode === 'recentlyCreated') {
+      result = firstRecipe.createdAt.localeCompare(secondRecipe.createdAt);
+    } else {
+      result = firstRecipe.lastUsedAt.localeCompare(secondRecipe.lastUsedAt);
     }
 
-    if (sortMode === 'recentlyCreated') {
-      return secondRecipe.createdAt.localeCompare(firstRecipe.createdAt);
-    }
-
-    return secondRecipe.lastUsedAt.localeCompare(firstRecipe.lastUsedAt);
+    return sortState.direction === 'asc' ? result : result * -1;
   });
 }
 

@@ -2,13 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { getAllRecipes, repairLocalDatabase, seedMockRecipes, updateLastUsed } from '../db';
 import type { Recipe } from '../types/recipe';
-import type { RecipeSortMode } from '../types/sort';
+import type { RecipeSortMode, RecipeSortState } from '../types/sort';
 import { logAndReturnMessage } from '../utils/errors';
 import { matchesRecipeSearch, sortRecipes } from '../utils/recipeFilters';
 
 type UseRecipesOptions = {
   searchQuery?: string;
-  sortMode?: RecipeSortMode;
+  sortMode?: RecipeSortMode | RecipeSortState;
 };
 
 export function useRecipes({ searchQuery = '', sortMode = 'recentlyUsed' }: UseRecipesOptions = {}) {

@@ -5,6 +5,7 @@ import { useNearViewport } from '../../hooks/useNearViewport';
 import { useRecipeImagePreview } from '../../hooks/useRecipeImagePreview';
 import type { Recipe } from '../../types/recipe';
 import { cn } from '../../utils/cn';
+import { toImageObjectPosition } from '../../utils/imagePosition';
 import { getRecipePreviewLabel, getRecipePreviewStyle } from '../../utils/recipePreview';
 
 type RecipeCardProps = {
@@ -38,6 +39,9 @@ function RecipeCardComponent({ recipe, onOpen }: RecipeCardProps) {
               decoding="async"
               loading="lazy"
               className="size-full object-cover transition duration-300 group-hover:scale-105"
+              style={{
+                objectPosition: toImageObjectPosition(recipe.previewImagePosition),
+              }}
             />
           ) : imageId ? (
             <>

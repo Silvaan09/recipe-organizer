@@ -4,16 +4,19 @@ export const mockRecipes: NewRecipeInput[] = [
   {
     title: 'Rosemary Tomato Pasta',
     keywords: ['pasta', 'tomato', 'rosemary', 'weeknight', 'vegetarian'],
-    imageIds: ['mock-pasta-cover'],
+    previewImageId: 'mock-pasta-cover',
+    imageIds: [],
   },
   {
     title: 'Strawberry Breakfast Bowl',
     keywords: ['breakfast', 'strawberry', 'yogurt', 'quick', 'fresh'],
-    imageIds: ['mock-breakfast-cover'],
+    previewImageId: 'mock-breakfast-cover',
+    imageIds: [],
   },
   {
     title: 'Lemon Herb Chicken',
     keywords: ['chicken', 'lemon', 'herbs', 'dinner', 'meal prep'],
-    imageIds: ['mock-chicken-cover'],
+    previewImageId: 'mock-chicken-cover',
+    imageIds: [],
   },
 ];

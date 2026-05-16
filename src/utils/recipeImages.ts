@@ -13,10 +13,18 @@ const localRecipeImages: Record<string, { alt: string; src: string }> = {
   },
 };
 
+const fallbackRecipeImageIds = Object.keys(localRecipeImages);
+
 export function getLocalRecipeImage(imageId: string | undefined) {
   if (!imageId) {
     return undefined;
   }
 
   return localRecipeImages[imageId];
+}
+
+export function getFallbackRecipeImageId(seed: string) {
+  const hash = [...seed].reduce((total, char) => total + char.charCodeAt(0), 0);
+
+  return fallbackRecipeImageIds[hash % fallbackRecipeImageIds.length];
 }

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 
 import { AppShell } from './components/layout/AppShell';
+import { ArchivePage } from './pages/ArchivePage';
 import { HomePage } from './pages/HomePage';
 import { RecipeDetailPage } from './pages/RecipeDetailPage';
 import { RecipeFormPage } from './pages/RecipeFormPage';
@@ -14,7 +15,9 @@ export default function App() {
   const [editingRecipeId, setEditingRecipeId] = useState<string | undefined>();
   const [isRecipeFormOpen, setIsRecipeFormOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isArchiveOpen, setIsArchiveOpen] = useState(false);
   const [selectedRecipeId, setSelectedRecipeId] = useState<string | undefined>();
+  const [selectedArchivedRecipeId, setSelectedArchivedRecipeId] = useState<string | undefined>();
 
   const pages = useMemo(
     () => ({
@@ -24,12 +27,16 @@ export default function App() {
             setEditingRecipeId(undefined);
             setIsRecipeFormOpen(true);
             setIsSettingsOpen(false);
+            setIsArchiveOpen(false);
             setSelectedRecipeId(undefined);
+            setSelectedArchivedRecipeId(undefined);
           }}
           onOpenRecipe={(recipeId) => {
             setSelectedRecipeId(recipeId);
             setIsRecipeFormOpen(false);
             setIsSettingsOpen(false);
+            setIsArchiveOpen(false);
+            setSelectedArchivedRecipeId(undefined);
           }}
         />
       ),
@@ -39,12 +46,16 @@ export default function App() {
             setEditingRecipeId(undefined);
             setIsRecipeFormOpen(true);
             setIsSettingsOpen(false);
+            setIsArchiveOpen(false);
             setSelectedRecipeId(undefined);
+            setSelectedArchivedRecipeId(undefined);
           }}
           onOpenRecipe={(recipeId) => {
             setSelectedRecipeId(recipeId);
             setIsRecipeFormOpen(false);
             setIsSettingsOpen(false);
+            setIsArchiveOpen(false);
+            setSelectedArchivedRecipeId(undefined);
           }}
         />
       ),
@@ -60,17 +71,28 @@ export default function App() {
   function openSettings() {
     closeRecipeForm();
     setSelectedRecipeId(undefined);
+    setSelectedArchivedRecipeId(undefined);
     setIsSettingsOpen(true);
+    setIsArchiveOpen(false);
   }
 
   function closeSettings() {
     setIsSettingsOpen(false);
+    setIsArchiveOpen(false);
+  }
+
+  function openArchive() {
+    setSelectedArchivedRecipeId(undefined);
+    setIsSettingsOpen(false);
+    setIsArchiveOpen(true);
   }
 
   function openRecipeEditor(recipeId: string) {
     setEditingRecipeId(recipeId);
     setIsRecipeFormOpen(true);
     setIsSettingsOpen(false);
+    setIsArchiveOpen(false);
+    setSelectedArchivedRecipeId(undefined);
   }
 
   function handleSavedRecipe(recipe: Recipe) {
@@ -82,16 +104,35 @@ export default function App() {
     <AppShell
       activeTab={activeTab}
       onSettingsClick={openSettings}
-      showBottomTabs={!isRecipeFormOpen && !selectedRecipeId}
+      showBottomTabs={!isRecipeFormOpen && !selectedRecipeId && !selectedArchivedRecipeId}
       onTabChange={(nextTab) => {
         closeRecipeForm();
         closeSettings();
+        setIsArchiveOpen(false);
         setSelectedRecipeId(undefined);
+        setSelectedArchivedRecipeId(undefined);
         setActiveTab(nextTab);
       }}
     >
-      {isSettingsOpen ? (
-        <SettingsPage onClose={closeSettings} />
+      {selectedArchivedRecipeId ? (
+        <RecipeDetailPage
+          isArchived
+          recipeId={selectedArchivedRecipeId}
+          onBack={() => setSelectedArchivedRecipeId(undefined)}
+          onDeleted={() => setSelectedArchivedRecipeId(undefined)}
+          onEdit={openRecipeEditor}
+          onRestored={() => setSelectedArchivedRecipeId(undefined)}
+        />
+      ) : isArchiveOpen ? (
+        <ArchivePage
+          onClose={() => {
+            setIsArchiveOpen(false);
+            setIsSettingsOpen(true);
+          }}
+          onOpenRecipe={(recipeId) => setSelectedArchivedRecipeId(recipeId)}
+        />
+      ) : isSettingsOpen ? (
+        <SettingsPage onClose={closeSettings} onOpenArchive={openArchive} />
       ) : isRecipeFormOpen ? (
         <RecipeFormPage
           recipeId={editingRecipeId}

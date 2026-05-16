@@ -1,15 +1,24 @@
-export type Recipe = {
+import type { SyncMetadata } from './sync';
+
+export type RecipeImagePosition = {
+  x: number;
+  y: number;
+};
+
+export type Recipe = SyncMetadata & {
   id: string;
   title: string;
   keywords: string[];
   previewImageId?: string;
+  previewImagePosition?: RecipeImagePosition;
   imageIds: string[];
+  archivedAt?: string;
   createdAt: string;
   updatedAt: string;
   lastUsedAt: string;
 };
 
-export type RecipeImage = {
+export type RecipeImage = SyncMetadata & {
   id: string;
   recipeId: string;
   blob: Blob;
@@ -32,12 +41,26 @@ export type NewRecipeInput = {
   title: string;
   keywords: string[];
   previewImageId?: string;
+  previewImagePosition?: RecipeImagePosition;
   imageIds: string[];
   lastUsedAt?: string;
 };
 
 export type RecipeUpdateInput = Partial<
-  Pick<Recipe, 'title' | 'keywords' | 'previewImageId' | 'imageIds' | 'lastUsedAt'>
+  Pick<
+    Recipe,
+    | 'title'
+    | 'keywords'
+    | 'previewImageId'
+    | 'previewImagePosition'
+    | 'imageIds'
+    | 'archivedAt'
+    | 'deletedAt'
+    | 'lastSyncedAt'
+    | 'lastUsedAt'
+    | 'localUpdatedAt'
+    | 'syncStatus'
+  >
 >;
 
 export type RecipeSummary = {
@@ -45,6 +68,7 @@ export type RecipeSummary = {
   title: string;
   keywords: string[];
   previewImageId?: string;
+  previewImagePosition?: RecipeImagePosition;
   imageIds: string[];
   lastUsedAt: string;
 };

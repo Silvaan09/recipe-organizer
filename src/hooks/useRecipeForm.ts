@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { addRecipe, addRecipeImages, deleteRecipeImages, getRecipeImage, updateRecipe } from '../db';
 import { processRecipeImage, type ImageCropArea } from '../services/image';
-import type { Recipe } from '../types/recipe';
+import type { Recipe, RecipeImagePosition } from '../types/recipe';
 import { logger } from '../utils/logger';
-import { getLocalRecipeImage } from '../utils/recipeImages';
+import { getFallbackRecipeImageId, getLocalRecipeImage } from '../utils/recipeImages';
 
 export type ImageDraft = {
   alt: string;
@@ -15,6 +15,7 @@ export type ImageDraft = {
   optimizedSize?: number;
   originalSize?: number;
   previewUrl: string;
+  previewImagePosition?: RecipeImagePosition;
   sourceFile?: File;
   status: 'ready' | 'processing' | 'error';
   thumbnailFile?: File;
@@ -48,13 +49,49 @@ function normalizeKeywordText(keywordText: string) {
   ];
 }
 
+function clampPercent(value: number) {
+  return Math.min(Math.max(Math.round(value), 0), 100);
+}
+
 function revokeDraftUrl(draft: ImageDraft) {
   if (draft.isObjectUrl) {
     URL.revokeObjectURL(draft.previewUrl);
   }
 }
 
-async function loadImageDraft(imageId: string): Promise<ImageDraft | undefined> {
+function loadImageElement(file: Blob): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const imageElement = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    imageElement.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(imageElement);
+    };
+    imageElement.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('Image could not be loaded.'));
+    };
+    imageElement.src = objectUrl;
+  });
+}
+
+async function createPreviewImagePosition(
+  file: Blob,
+  cropArea: ImageCropArea,
+): Promise<RecipeImagePosition> {
+  const imageElement = await loadImageElement(file);
+
+  return {
+    x: clampPercent(((cropArea.x + cropArea.width / 2) / imageElement.naturalWidth) * 100),
+    y: clampPercent(((cropArea.y + cropArea.height / 2) / imageElement.naturalHeight) * 100),
+  };
+}
+
+async function loadImageDraft(
+  imageId: string,
+  previewImagePosition?: RecipeImagePosition,
+): Promise<ImageDraft | undefined> {
   const localImage = getLocalRecipeImage(imageId);
 
   if (localImage) {
@@ -62,6 +99,7 @@ async function loadImageDraft(imageId: string): Promise<ImageDraft | undefined> 
       alt: localImage.alt,
       imageId,
       isObjectUrl: false,
+      previewImagePosition,
       previewUrl: localImage.src,
       status: 'ready',
       tempId: createTempId(),
@@ -75,13 +113,20 @@ async function loadImageDraft(imageId: string): Promise<ImageDraft | undefined> 
       return undefined;
     }
 
+    const sourceFile = new File([storedImage.blob], storedImage.fileName, {
+      type: storedImage.mimeType || storedImage.blob.type || 'image/jpeg',
+      lastModified: new Date(storedImage.createdAt).getTime(),
+    });
+
     return {
       alt: storedImage.fileName,
       imageId,
       isObjectUrl: true,
       optimizedSize: storedImage.size,
       originalSize: storedImage.size,
+      previewImagePosition,
       previewUrl: URL.createObjectURL(storedImage.blob),
+      sourceFile,
       status: 'ready',
       tempId: createTempId(),
     };
@@ -138,8 +183,10 @@ export function useRecipeForm({ initialRecipe, onSaved }: UseRecipeFormOptions) 
 
     async function loadInitialImages() {
       const [previewDraft, galleryDrafts] = await Promise.all([
-        initialRecipe?.previewImageId ? loadImageDraft(initialRecipe.previewImageId) : undefined,
-        Promise.all((initialRecipe?.imageIds ?? []).map(loadImageDraft)),
+        initialRecipe?.previewImageId
+          ? loadImageDraft(initialRecipe.previewImageId, initialRecipe.previewImagePosition)
+          : undefined,
+        Promise.all((initialRecipe?.imageIds ?? []).map((imageId) => loadImageDraft(imageId))),
       ]);
       const nextPreviewDrafts = previewDraft ? [previewDraft] : [];
       const nextImageDrafts = galleryDrafts.filter((draft): draft is ImageDraft => Boolean(draft));
@@ -209,6 +256,7 @@ export function useRecipeForm({ initialRecipe, onSaved }: UseRecipeFormOptions) 
                   alt: processedImage.file.name,
                   error: undefined,
                   file: processedImage.file,
+                  imageId: undefined,
                   isObjectUrl: true,
                   optimizedSize: processedImage.size,
                   originalSize: processedImage.originalSize,
@@ -286,11 +334,29 @@ export function useRecipeForm({ initialRecipe, onSaved }: UseRecipeFormOptions) 
       const drafts = target === 'preview' ? previewImageDraftsRef.current : imageDraftsRef.current;
       const draft = drafts.find((currentDraft) => currentDraft.tempId === tempId);
 
-      if (!draft?.sourceFile) {
+      const editableFile = draft?.file ?? draft?.sourceFile;
+
+      if (!editableFile) {
         return;
       }
 
-      await replaceDraftWithProcessedImage(target, tempId, draft.sourceFile, cropArea);
+      if (target === 'preview') {
+        const previewImagePosition = await createPreviewImagePosition(editableFile, cropArea);
+
+        setPreviewImageDrafts((currentDrafts) =>
+          currentDrafts.map((currentDraft) =>
+            currentDraft.tempId === tempId
+              ? {
+                  ...currentDraft,
+                  previewImagePosition,
+                }
+              : currentDraft,
+          ),
+        );
+        return;
+      }
+
+      await replaceDraftWithProcessedImage(target, tempId, editableFile, cropArea);
     },
     [replaceDraftWithProcessedImage],
   );
@@ -360,12 +426,15 @@ export function useRecipeForm({ initialRecipe, onSaved }: UseRecipeFormOptions) 
           recipeImageFiles.map((draft, index) => [draft.tempId, newRecipeImageIds[index]]),
         );
         const previewImageId =
-          mapDraftsToImageIds(previewImageDrafts, newPreviewImageIdByTempId)[0] ?? undefined;
+          mapDraftsToImageIds(previewImageDrafts, newPreviewImageIdByTempId)[0] ??
+          getFallbackRecipeImageId(`${initialRecipe.id}-${normalizedTitle}`);
+        const previewImagePosition = previewImageDrafts[0]?.previewImagePosition;
         const imageIds = mapDraftsToImageIds(imageDrafts, newRecipeImageIdByTempId);
         const savedRecipe = await updateRecipe(initialRecipe.id, {
           title: normalizedTitle,
           keywords: normalizedKeywords,
           previewImageId,
+          previewImagePosition,
           imageIds,
         });
         const previousImageIds = [
@@ -398,7 +467,9 @@ export function useRecipeForm({ initialRecipe, onSaved }: UseRecipeFormOptions) 
         recipeImageFiles.map((draft, index) => [draft.tempId, newRecipeImageIds[index]]),
       );
       const previewImageId =
-        mapDraftsToImageIds(previewImageDrafts, newPreviewImageIdByTempId)[0] ?? undefined;
+        mapDraftsToImageIds(previewImageDrafts, newPreviewImageIdByTempId)[0] ??
+        getFallbackRecipeImageId(`${savedRecipeWithoutImages.id}-${normalizedTitle}`);
+      const previewImagePosition = previewImageDrafts[0]?.previewImagePosition;
       const imageIds = mapDraftsToImageIds(imageDrafts, newRecipeImageIdByTempId);
       const savedRecipe =
         previewImageId || imageIds.length > 0
@@ -406,6 +477,7 @@ export function useRecipeForm({ initialRecipe, onSaved }: UseRecipeFormOptions) 
               title: normalizedTitle,
               keywords: normalizedKeywords,
               previewImageId,
+              previewImagePosition,
               imageIds,
             })
           : savedRecipeWithoutImages;

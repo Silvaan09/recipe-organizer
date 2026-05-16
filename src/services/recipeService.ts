@@ -13,6 +13,7 @@ function toRecipeSummary(recipe: Recipe): RecipeSummary {
     title: recipe.title,
     keywords: recipe.keywords,
     previewImageId: recipe.previewImageId,
+    previewImagePosition: recipe.previewImagePosition,
     imageIds: recipe.imageIds,
     lastUsedAt: recipe.lastUsedAt,
   };

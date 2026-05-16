@@ -1,5 +1,6 @@
 import { db } from './schema';
 import { generateRecipeImageThumbnail } from '../services/image';
+import { createLocalSyncMetadata } from '../services/sync';
 import type { RecipeImage, RecipeImageThumbnail } from '../types/recipe';
 import { logger } from '../utils/logger';
 import { validateRecipeImage, validateRecipeImageThumbnail } from '../validation/dataValidation';
@@ -33,6 +34,7 @@ export async function addRecipeImages(
         mimeType: file.type,
         size: file.size,
         createdAt,
+        ...createLocalSyncMetadata(createdAt),
       };
       const imageThumbnail: RecipeImageThumbnail = {
         id,

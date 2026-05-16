@@ -1,4 +1,4 @@
-import { ArrowLeft, Database, Download, Trash2, Upload } from 'lucide-react';
+import { Archive, ArrowLeft, Database, Download, Trash2, Upload } from 'lucide-react';
 import { useRef, useState } from 'react';
 
 import { clearLocalDatabase } from '../db';
@@ -8,6 +8,7 @@ import { logAndReturnMessage } from '../utils/errors';
 
 type SettingsPageProps = {
   onClose: () => void;
+  onOpenArchive: () => void;
 };
 
 type SettingsStatus = {
@@ -15,7 +16,7 @@ type SettingsStatus = {
   message: string;
 };
 
-export function SettingsPage({ onClose }: SettingsPageProps) {
+export function SettingsPage({ onClose, onOpenArchive }: SettingsPageProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<SettingsStatus>();
   const [isBusy, setIsBusy] = useState(false);
@@ -175,6 +176,28 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
             }
           }}
         />
+      </Card>
+
+      <Card>
+        <div className="flex items-start gap-3">
+          <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-petal-100 text-petal-700">
+            <Archive aria-hidden="true" size={21} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-base font-bold">Archive</h3>
+            <p className="mt-1 text-sm leading-6 text-cocoa-700">
+              Restore deleted recipes or permanently remove them from this device.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border border-petal-100 bg-white px-4 text-sm font-bold text-petal-700 shadow-soft transition hover:bg-petal-50"
+          onClick={onOpenArchive}
+        >
+          <Archive aria-hidden="true" size={18} />
+          Open Archive
+        </button>
       </Card>
 
       <Card className="border-petal-200 bg-petal-50">

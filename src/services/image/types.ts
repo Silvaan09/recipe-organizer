@@ -1,6 +1,8 @@
 import type { Area } from 'react-easy-crop';
 
-export type ImageCropArea = Area;
+export type ImageCropArea = Area & {
+  rotation?: number;
+};
 
 export type ProcessedRecipeImage = {
   file: File;

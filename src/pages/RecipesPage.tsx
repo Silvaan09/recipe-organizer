@@ -5,7 +5,7 @@ import { RecipeList } from '../components/recipes/RecipeList';
 import { RecipeSortControl } from '../components/recipes/RecipeSortControl';
 import { useRecipes } from '../hooks/useRecipes';
 import type { Recipe } from '../types/recipe';
-import type { RecipeSortMode } from '../types/sort';
+import type { RecipeSortState } from '../types/sort';
 
 type RecipesPageProps = {
   onAddRecipe: () => void;
@@ -13,7 +13,10 @@ type RecipesPageProps = {
 };
 
 export function RecipesPage({ onAddRecipe, onOpenRecipe }: RecipesPageProps) {
-  const [sortMode, setSortMode] = useState<RecipeSortMode>('alphabetical');
+  const [sortMode, setSortMode] = useState<RecipeSortState>({
+    direction: 'asc',
+    mode: 'alphabetical',
+  });
   const { error, isLoading, visibleRecipes } = useRecipes({ sortMode });
 
   const handleRecipeClick = useCallback(async (recipe: Recipe) => {

@@ -2,15 +2,26 @@ import { ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { useRecipeFullImage } from '../../hooks/useRecipeFullImage';
+import type { RecipeImagePosition } from '../../types/recipe';
 import { cn } from '../../utils/cn';
+import { toImageObjectPosition } from '../../utils/imagePosition';
 import { Skeleton } from '../ui/Skeleton';
 
 type RecipeImageGalleryProps = {
   imageIds: string[];
+  imagePosition?: RecipeImagePosition;
+  onImageOpen?: (index: number) => void;
+  showLabel?: boolean;
   title: string;
 };
 
-export function RecipeImageGallery({ imageIds, title }: RecipeImageGalleryProps) {
+export function RecipeImageGallery({
+  imageIds,
+  imagePosition,
+  onImageOpen,
+  showLabel = true,
+  title,
+}: RecipeImageGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const activeImageId = imageIds[activeIndex];
@@ -69,12 +80,22 @@ export function RecipeImageGallery({ imageIds, title }: RecipeImageGalleryProps)
       >
         <div className="aspect-[4/3] bg-petal-100/70">
           {activeImage.src ? (
-            <img
-              src={activeImage.src}
-              alt={activeImage.alt || title}
-              className="size-full object-cover"
-              decoding="async"
-            />
+            <button
+              type="button"
+              className="block size-full cursor-zoom-in"
+              aria-label="Open image full screen"
+              onClick={() => onImageOpen?.(activeIndex)}
+            >
+              <img
+                src={activeImage.src}
+                alt={activeImage.alt || title}
+                className="size-full object-cover"
+                decoding="async"
+                style={{
+                  objectPosition: toImageObjectPosition(imagePosition),
+                }}
+              />
+            </button>
           ) : activeImage.isLoading ? (
             <Skeleton className="size-full rounded-none" />
           ) : (
@@ -84,9 +105,11 @@ export function RecipeImageGallery({ imageIds, title }: RecipeImageGalleryProps)
           )}
         </div>
 
-        <div className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-bold text-petal-700 shadow-soft">
-          {galleryLabel}
-        </div>
+        {showLabel ? (
+          <div className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-bold text-petal-700 shadow-soft">
+            {galleryLabel}
+          </div>
+        ) : null}
 
         {hasMultipleImages ? (
           <>

@@ -1,4 +1,5 @@
 import type { Recipe, RecipeImage, RecipeImageThumbnail } from '../types/recipe';
+import { isSyncStatus, normalizeSyncMetadata } from '../services/sync';
 
 export type ValidationResult<T> =
   | { data: T; ok: true }
@@ -24,6 +25,16 @@ function validateDateString(value: unknown, fieldName: string, errors: string[])
   if (typeof value !== 'string' || Number.isNaN(Date.parse(value))) {
     errors.push(`${fieldName} must be a valid date string.`);
   }
+}
+
+function validateOptionalDateString(value: unknown, fieldName: string, errors: string[]) {
+  if (value !== undefined) {
+    validateDateString(value, fieldName, errors);
+  }
+}
+
+function validatePercent(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100;
 }
 
 export function validateRecipe(value: unknown): ValidationResult<Recipe> {
@@ -58,6 +69,27 @@ export function validateRecipe(value: unknown): ValidationResult<Recipe> {
     errors.push('Recipe previewImageId must be a non-empty string when present.');
   }
 
+  if (value.previewImagePosition !== undefined) {
+    if (
+      !isRecord(value.previewImagePosition) ||
+      !validatePercent(value.previewImagePosition.x) ||
+      !validatePercent(value.previewImagePosition.y)
+    ) {
+      errors.push('Recipe previewImagePosition must contain x and y values between 0 and 100.');
+    }
+  }
+
+  if (value.archivedAt !== undefined) {
+    validateDateString(value.archivedAt, 'archivedAt', errors);
+  }
+
+  if (value.syncStatus !== undefined && !isSyncStatus(value.syncStatus)) {
+    errors.push('Recipe syncStatus is not supported.');
+  }
+
+  validateOptionalDateString(value.deletedAt, 'deletedAt', errors);
+  validateOptionalDateString(value.lastSyncedAt, 'lastSyncedAt', errors);
+  validateOptionalDateString(value.localUpdatedAt, 'localUpdatedAt', errors);
   validateDateString(value.createdAt, 'createdAt', errors);
   validateDateString(value.updatedAt, 'updatedAt', errors);
   validateDateString(value.lastUsedAt, 'lastUsedAt', errors);
@@ -73,10 +105,27 @@ export function validateRecipe(value: unknown): ValidationResult<Recipe> {
       keywords: normalizeKeywordList(value.keywords as string[]),
       previewImageId:
         typeof value.previewImageId === 'string' ? value.previewImageId.trim() : undefined,
+      previewImagePosition: isRecord(value.previewImagePosition)
+        ? {
+            x: Number(value.previewImagePosition.x),
+            y: Number(value.previewImagePosition.y),
+          }
+        : undefined,
       imageIds: normalizeStringList(value.imageIds as string[]),
+      archivedAt: typeof value.archivedAt === 'string' ? String(value.archivedAt) : undefined,
       createdAt: String(value.createdAt),
       updatedAt: String(value.updatedAt),
       lastUsedAt: String(value.lastUsedAt),
+      ...normalizeSyncMetadata(
+        {
+          deletedAt: typeof value.deletedAt === 'string' ? value.deletedAt : undefined,
+          lastSyncedAt: typeof value.lastSyncedAt === 'string' ? value.lastSyncedAt : undefined,
+          localUpdatedAt:
+            typeof value.localUpdatedAt === 'string' ? value.localUpdatedAt : undefined,
+          syncStatus: isSyncStatus(value.syncStatus) ? value.syncStatus : undefined,
+        },
+        String(value.updatedAt),
+      ),
     },
     ok: true,
   };
@@ -113,6 +162,13 @@ export function validateRecipeImage(value: unknown): ValidationResult<RecipeImag
     errors.push('Image size must be a positive number.');
   }
 
+  if (value.syncStatus !== undefined && !isSyncStatus(value.syncStatus)) {
+    errors.push('Image syncStatus is not supported.');
+  }
+
+  validateOptionalDateString(value.deletedAt, 'image deletedAt', errors);
+  validateOptionalDateString(value.lastSyncedAt, 'image lastSyncedAt', errors);
+  validateOptionalDateString(value.localUpdatedAt, 'image localUpdatedAt', errors);
   validateDateString(value.createdAt, 'image createdAt', errors);
 
   if (errors.length > 0) {
@@ -128,6 +184,16 @@ export function validateRecipeImage(value: unknown): ValidationResult<RecipeImag
       mimeType: String(value.mimeType).trim(),
       size: Number(value.size),
       createdAt: String(value.createdAt),
+      ...normalizeSyncMetadata(
+        {
+          deletedAt: typeof value.deletedAt === 'string' ? value.deletedAt : undefined,
+          lastSyncedAt: typeof value.lastSyncedAt === 'string' ? value.lastSyncedAt : undefined,
+          localUpdatedAt:
+            typeof value.localUpdatedAt === 'string' ? value.localUpdatedAt : undefined,
+          syncStatus: isSyncStatus(value.syncStatus) ? value.syncStatus : undefined,
+        },
+        String(value.createdAt),
+      ),
     },
     ok: true,
   };

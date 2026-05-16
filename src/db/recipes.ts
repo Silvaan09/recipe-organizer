@@ -2,6 +2,7 @@ import { deleteRecipeImagesByRecipeId } from './images';
 import { hasSeededMockRecipes, markMockRecipesSeeded } from './maintenance';
 import { db } from './schema';
 import { mockRecipes } from './seed';
+import { createLocalSyncMetadata, markLocalChange } from '../services/sync';
 import type { NewRecipeInput, Recipe, RecipeUpdateInput } from '../types/recipe';
 import { logger } from '../utils/logger';
 import { validateRecipe } from '../validation/dataValidation';
@@ -33,10 +34,13 @@ export async function addRecipe(input: NewRecipeInput): Promise<Recipe> {
     title: input.title.trim(),
     keywords: normalizeKeywords(input.keywords),
     previewImageId: input.previewImageId,
+    previewImagePosition: input.previewImagePosition,
     imageIds: [...input.imageIds],
+    archivedAt: undefined,
     createdAt: timestamp,
     updatedAt: timestamp,
     lastUsedAt: input.lastUsedAt ?? timestamp,
+    ...createLocalSyncMetadata(timestamp),
   };
 
   const validation = validateRecipe(recipe);
@@ -52,6 +56,7 @@ export async function addRecipe(input: NewRecipeInput): Promise<Recipe> {
 
 export async function updateRecipe(id: string, changes: RecipeUpdateInput): Promise<Recipe> {
   const existingRecipe = await getRecipe(id);
+  const timestamp = nowIso();
 
   if (!existingRecipe) {
     throw new Error(`Recipe ${id} was not found.`);
@@ -64,8 +69,17 @@ export async function updateRecipe(id: string, changes: RecipeUpdateInput): Prom
     keywords: changes.keywords ? normalizeKeywords(changes.keywords) : existingRecipe.keywords,
     previewImageId:
       'previewImageId' in changes ? changes.previewImageId : existingRecipe.previewImageId,
+    previewImagePosition:
+      'previewImagePosition' in changes
+        ? changes.previewImagePosition
+        : existingRecipe.previewImagePosition,
     imageIds: changes.imageIds ? [...changes.imageIds] : existingRecipe.imageIds,
-    updatedAt: nowIso(),
+    archivedAt: 'archivedAt' in changes ? changes.archivedAt : existingRecipe.archivedAt,
+    deletedAt: 'deletedAt' in changes ? changes.deletedAt : existingRecipe.deletedAt,
+    lastSyncedAt:
+      'lastSyncedAt' in changes ? changes.lastSyncedAt : existingRecipe.lastSyncedAt,
+    updatedAt: timestamp,
+    ...markLocalChange(existingRecipe, timestamp),
   };
 
   const validation = validateRecipe(updatedRecipe);
@@ -82,6 +96,28 @@ export async function updateRecipe(id: string, changes: RecipeUpdateInput): Prom
 export async function deleteRecipe(id: string): Promise<void> {
   await deleteRecipeImagesByRecipeId(id);
   await db.recipes.delete(id);
+}
+
+export async function archiveRecipe(id: string): Promise<void> {
+  const timestamp = nowIso();
+  const existingRecipe = await getRecipe(id);
+
+  await db.recipes.update(id, {
+    archivedAt: timestamp,
+    ...(existingRecipe ? markLocalChange(existingRecipe, timestamp) : createLocalSyncMetadata(timestamp)),
+    updatedAt: timestamp,
+  });
+}
+
+export async function restoreRecipe(id: string): Promise<void> {
+  const timestamp = nowIso();
+  const existingRecipe = await getRecipe(id);
+
+  await db.recipes.update(id, {
+    archivedAt: undefined,
+    ...(existingRecipe ? markLocalChange(existingRecipe, timestamp) : createLocalSyncMetadata(timestamp)),
+    updatedAt: timestamp,
+  });
 }
 
 export async function getRecipe(id: string): Promise<Recipe | undefined> {
@@ -102,6 +138,18 @@ export async function getRecipe(id: string): Promise<Recipe | undefined> {
 }
 
 export async function getAllRecipes(): Promise<Recipe[]> {
+  const recipes = await getAllStoredRecipes();
+
+  return recipes.filter((recipe) => !recipe.archivedAt);
+}
+
+export async function getArchivedRecipes(): Promise<Recipe[]> {
+  const recipes = await getAllStoredRecipes();
+
+  return recipes.filter((recipe) => recipe.archivedAt);
+}
+
+export async function getAllStoredRecipes(): Promise<Recipe[]> {
   const recipes = await db.recipes.orderBy('updatedAt').reverse().toArray();
 
   return recipes.flatMap((recipe) => {
@@ -134,8 +182,12 @@ export async function searchRecipes(query: string): Promise<Recipe[]> {
 }
 
 export async function updateLastUsed(id: string): Promise<void> {
+  const timestamp = nowIso();
+  const existingRecipe = await getRecipe(id);
+
   await db.recipes.update(id, {
-    lastUsedAt: nowIso(),
+    lastUsedAt: timestamp,
+    ...(existingRecipe ? markLocalChange(existingRecipe, timestamp) : createLocalSyncMetadata(timestamp)),
   });
 }
 

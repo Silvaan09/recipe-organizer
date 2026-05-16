@@ -47,21 +47,52 @@ function toJpgFileName(fileName: string) {
   return `${fileName.replace(/\.[^.]+$/, '') || 'recipe-image'}.jpg`;
 }
 
-function getCropSource(image: HTMLImageElement, cropArea?: ImageCropArea) {
+function normalizeRotation(rotation = 0) {
+  return ((Math.round(rotation / 90) * 90) % 360 + 360) % 360;
+}
+
+function createRotatedSource(image: HTMLImageElement, rotation: number) {
+  const normalizedRotation = normalizeRotation(rotation);
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d', { alpha: false });
+  const isSideways = normalizedRotation === 90 || normalizedRotation === 270;
+
+  if (!context) {
+    throw new Error('Image rotation is not supported in this browser.');
+  }
+
+  canvas.width = isSideways ? image.naturalHeight : image.naturalWidth;
+  canvas.height = isSideways ? image.naturalWidth : image.naturalHeight;
+  context.fillStyle = '#fff7f8';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.translate(canvas.width / 2, canvas.height / 2);
+  context.rotate((normalizedRotation * Math.PI) / 180);
+  context.drawImage(image, -image.naturalWidth / 2, -image.naturalHeight / 2);
+
+  return canvas;
+}
+
+function getCropSource(
+  sourceSize: { height: number; width: number },
+  cropArea?: ImageCropArea,
+) {
   if (!cropArea) {
     return {
-      height: image.naturalHeight,
-      width: image.naturalWidth,
+      height: sourceSize.height,
+      width: sourceSize.width,
       x: 0,
       y: 0,
     };
   }
 
+  const x = Math.max(0, Math.round(cropArea.x));
+  const y = Math.max(0, Math.round(cropArea.y));
+
   return {
-    height: Math.max(1, Math.round(cropArea.height)),
-    width: Math.max(1, Math.round(cropArea.width)),
-    x: Math.max(0, Math.round(cropArea.x)),
-    y: Math.max(0, Math.round(cropArea.y)),
+    height: Math.max(1, Math.min(Math.round(cropArea.height), sourceSize.height - y)),
+    width: Math.max(1, Math.min(Math.round(cropArea.width), sourceSize.width - x)),
+    x,
+    y,
   };
 }
 
@@ -116,7 +147,14 @@ export async function processRecipeImage(
   cropArea?: ImageCropArea,
 ): Promise<ProcessedRecipeImage> {
   const image = await loadImage(file);
-  const source = getCropSource(image, cropArea);
+  const rotatedSource = createRotatedSource(image, cropArea?.rotation ?? 0);
+  const source = getCropSource(
+    {
+      height: rotatedSource.height,
+      width: rotatedSource.width,
+    },
+    cropArea,
+  );
   const outputWidth = Math.max(1, Math.round(source.width * DOWNSCALE_RATIO));
   const outputHeight = Math.max(1, Math.round(source.height * DOWNSCALE_RATIO));
   const canvas = document.createElement('canvas');
@@ -133,7 +171,7 @@ export async function processRecipeImage(
   context.imageSmoothingEnabled = true;
   context.imageSmoothingQuality = 'high';
   context.drawImage(
-    image,
+    rotatedSource,
     source.x,
     source.y,
     source.width,

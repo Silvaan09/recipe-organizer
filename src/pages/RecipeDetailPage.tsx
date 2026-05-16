@@ -1,24 +1,36 @@
-import { ArrowLeft, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, Pencil, RotateCcw, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import { deleteRecipe, getRecipe, updateLastUsed } from '../db';
+import { archiveRecipe, deleteRecipe, getRecipe, restoreRecipe, updateLastUsed } from '../db';
 import { RecipeImageGallery } from '../components/recipes/RecipeImageGallery';
+import { RecipeImageLightbox } from '../components/recipes/RecipeImageLightbox';
+import { RecipeImageShelf } from '../components/recipes/RecipeImageShelf';
 import { Card } from '../components/ui/Card';
 import { Skeleton } from '../components/ui/Skeleton';
 import type { Recipe } from '../types/recipe';
 import { logAndReturnMessage } from '../utils/errors';
 
 type RecipeDetailPageProps = {
+  isArchived?: boolean;
   onBack: () => void;
   onDeleted: () => void;
   onEdit: (recipeId: string) => void;
+  onRestored?: () => void;
   recipeId: string;
 };
 
-export function RecipeDetailPage({ onBack, onDeleted, onEdit, recipeId }: RecipeDetailPageProps) {
+export function RecipeDetailPage({
+  isArchived = false,
+  onBack,
+  onDeleted,
+  onEdit,
+  onRestored,
+  recipeId,
+}: RecipeDetailPageProps) {
   const [recipe, setRecipe] = useState<Recipe>();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState<{ imageIds: string[]; initialIndex: number }>();
 
   useEffect(() => {
     let isMounted = true;
@@ -32,12 +44,17 @@ export function RecipeDetailPage({ onBack, onDeleted, onEdit, recipeId }: Recipe
           throw new Error('Recipe could not be found locally.');
         }
 
-        await updateLastUsed(recipeId);
+        let lastUsedAt = nextRecipe.lastUsedAt;
+
+        if (!isArchived) {
+          lastUsedAt = new Date().toISOString();
+          await updateLastUsed(recipeId);
+        }
 
         if (isMounted) {
           setRecipe({
             ...nextRecipe,
-            lastUsedAt: new Date().toISOString(),
+            lastUsedAt,
           });
           setError(null);
         }
@@ -57,7 +74,7 @@ export function RecipeDetailPage({ onBack, onDeleted, onEdit, recipeId }: Recipe
     return () => {
       isMounted = false;
     };
-  }, [recipeId]);
+  }, [isArchived, recipeId]);
 
   async function handleDeleteRecipe() {
     if (!recipe) {
@@ -65,7 +82,41 @@ export function RecipeDetailPage({ onBack, onDeleted, onEdit, recipeId }: Recipe
     }
 
     const shouldDelete = window.confirm(
-      `Delete "${recipe.title}" from this device? This removes the recipe and its saved images.`,
+      `Move "${recipe.title}" to the archive? You can restore it from Settings.`,
+    );
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    try {
+      await archiveRecipe(recipe.id);
+      onDeleted();
+    } catch (deleteError) {
+      setError(logAndReturnMessage(deleteError, 'Recipe could not be archived.', { recipeId: recipe.id }));
+    }
+  }
+
+  async function handleRestoreRecipe() {
+    if (!recipe) {
+      return;
+    }
+
+    try {
+      await restoreRecipe(recipe.id);
+      onRestored?.();
+    } catch (restoreError) {
+      setError(logAndReturnMessage(restoreError, 'Recipe could not be restored.', { recipeId: recipe.id }));
+    }
+  }
+
+  async function handlePermanentDeleteRecipe() {
+    if (!recipe) {
+      return;
+    }
+
+    const shouldDelete = window.confirm(
+      `Permanently delete "${recipe.title}" and its saved images? This cannot be undone.`,
     );
 
     if (!shouldDelete) {
@@ -76,7 +127,9 @@ export function RecipeDetailPage({ onBack, onDeleted, onEdit, recipeId }: Recipe
       await deleteRecipe(recipe.id);
       onDeleted();
     } catch (deleteError) {
-      setError(logAndReturnMessage(deleteError, 'Recipe could not be deleted.', { recipeId: recipe.id }));
+      setError(logAndReturnMessage(deleteError, 'Recipe could not be permanently deleted.', {
+        recipeId: recipe.id,
+      }));
     }
   }
 
@@ -123,7 +176,25 @@ export function RecipeDetailPage({ onBack, onDeleted, onEdit, recipeId }: Recipe
         Back
       </button>
 
-      <RecipeImageGallery imageIds={recipe.imageIds} title={recipe.title} />
+      <section className="flex flex-col gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-petal-600">
+            Display image
+          </p>
+          <h2 className="mt-1 text-lg font-bold text-cocoa-900">Recipe cover</h2>
+        </div>
+        <RecipeImageGallery
+          imageIds={recipe.previewImageId ? [recipe.previewImageId] : []}
+          imagePosition={recipe.previewImagePosition}
+          onImageOpen={(initialIndex) => {
+            if (recipe.previewImageId) {
+              setLightbox({ imageIds: [recipe.previewImageId], initialIndex });
+            }
+          }}
+          showLabel={false}
+          title={recipe.title}
+        />
+      </section>
 
       <section className="rounded-lg bg-white p-5 shadow-soft">
         <p className="text-xs font-semibold uppercase tracking-wide text-petal-600">Recipe card</p>
@@ -149,24 +220,68 @@ export function RecipeDetailPage({ onBack, onDeleted, onEdit, recipeId }: Recipe
         </div>
       </section>
 
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          type="button"
-          className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-petal-500 px-4 text-sm font-bold text-white shadow-lg shadow-petal-300/40 transition hover:bg-petal-600"
-          onClick={() => onEdit(recipe.id)}
-        >
-          <Pencil aria-hidden="true" size={18} />
-          Edit
-        </button>
-        <button
-          type="button"
-          className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-petal-200 bg-white px-4 text-sm font-bold text-petal-700 shadow-soft transition hover:bg-petal-50"
-          onClick={() => void handleDeleteRecipe()}
-        >
-          <Trash2 aria-hidden="true" size={18} />
-          Delete
-        </button>
-      </div>
+      <section className="flex flex-col gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-petal-600">
+            Recipe images
+          </p>
+          <h2 className="mt-1 text-lg font-bold text-cocoa-900">Gallery</h2>
+        </div>
+        <RecipeImageShelf
+          imageIds={recipe.imageIds}
+          title={recipe.title}
+          onImageOpen={(initialIndex) => setLightbox({ imageIds: recipe.imageIds, initialIndex })}
+        />
+      </section>
+
+      {isArchived ? (
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-petal-500 px-4 text-sm font-bold text-white shadow-lg shadow-petal-300/40 transition hover:bg-petal-600"
+            onClick={() => void handleRestoreRecipe()}
+          >
+            <RotateCcw aria-hidden="true" size={18} />
+            Restore
+          </button>
+          <button
+            type="button"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-petal-200 bg-white px-4 text-sm font-bold text-petal-700 shadow-soft transition hover:bg-petal-50"
+            onClick={() => void handlePermanentDeleteRecipe()}
+          >
+            <Trash2 aria-hidden="true" size={18} />
+            Delete
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-petal-500 px-4 text-sm font-bold text-white shadow-lg shadow-petal-300/40 transition hover:bg-petal-600"
+            onClick={() => onEdit(recipe.id)}
+          >
+            <Pencil aria-hidden="true" size={18} />
+            Edit
+          </button>
+          <button
+            type="button"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-petal-200 bg-white px-4 text-sm font-bold text-petal-700 shadow-soft transition hover:bg-petal-50"
+            onClick={() => void handleDeleteRecipe()}
+          >
+            <Trash2 aria-hidden="true" size={18} />
+            Delete
+          </button>
+        </div>
+      )}
+
+      {lightbox ? (
+        <RecipeImageLightbox
+          imageIds={lightbox.imageIds}
+          initialIndex={lightbox.initialIndex}
+          title={recipe.title}
+          onClose={() => setLightbox(undefined)}
+        />
+      ) : null}
     </>
   );
 }

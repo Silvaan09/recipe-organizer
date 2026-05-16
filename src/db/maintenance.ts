@@ -81,6 +81,7 @@ export type DatabaseRepairReport = {
   corruptedImagesRemoved: number;
   corruptedRecipesSkipped: number;
   corruptedThumbnailsRemoved: number;
+  localDisplayImagesPromoted: number;
   missingImageReferencesRemoved: number;
   orphanImagesRemoved: number;
   orphanThumbnailsRemoved: number;
@@ -91,6 +92,7 @@ export async function repairLocalDatabase(): Promise<DatabaseRepairReport> {
     corruptedImagesRemoved: 0,
     corruptedRecipesSkipped: 0,
     corruptedThumbnailsRemoved: 0,
+    localDisplayImagesPromoted: 0,
     missingImageReferencesRemoved: 0,
     orphanImagesRemoved: 0,
     orphanThumbnailsRemoved: 0,
@@ -156,25 +158,34 @@ export async function repairLocalDatabase(): Promise<DatabaseRepairReport> {
           return;
         }
 
-        const repairedImageIds = validation.data.imageIds.filter(
-          (imageId) => validImageIds.has(imageId) || Boolean(getLocalRecipeImage(imageId)),
+        const localDisplayImageId = validation.data.imageIds.find((imageId) =>
+          Boolean(getLocalRecipeImage(imageId)),
         );
+        const repairedImageIds = validation.data.imageIds.filter(
+          (imageId) => !getLocalRecipeImage(imageId) && validImageIds.has(imageId),
+        );
+        const hasPreviewImage = Boolean(validation.data.previewImageId);
         const hasValidPreviewImage =
-          !validation.data.previewImageId ||
-          validImageIds.has(validation.data.previewImageId) ||
-          Boolean(getLocalRecipeImage(validation.data.previewImageId));
-        const previewRepair =
-          validation.data.previewImageId && !hasValidPreviewImage
-            ? { previewImageId: undefined }
-            : {};
+          Boolean(validation.data.previewImageId && validImageIds.has(validation.data.previewImageId)) ||
+          Boolean(validation.data.previewImageId && getLocalRecipeImage(validation.data.previewImageId));
+        const nextPreviewImageId =
+          hasValidPreviewImage
+            ? validation.data.previewImageId
+            : localDisplayImageId;
 
-        if (repairedImageIds.length !== validation.data.imageIds.length || !hasValidPreviewImage) {
+        if (
+          repairedImageIds.length !== validation.data.imageIds.length ||
+          (hasPreviewImage && !hasValidPreviewImage) ||
+          nextPreviewImageId !== validation.data.previewImageId
+        ) {
           report.missingImageReferencesRemoved +=
             validation.data.imageIds.length -
             repairedImageIds.length +
-            (hasValidPreviewImage ? 0 : 1);
+            (hasPreviewImage && !hasValidPreviewImage ? 1 : 0);
+          report.localDisplayImagesPromoted +=
+            nextPreviewImageId && nextPreviewImageId !== validation.data.previewImageId ? 1 : 0;
           await db.recipes.update(validation.data.id, {
-            ...previewRepair,
+            previewImageId: nextPreviewImageId,
             imageIds: repairedImageIds,
           });
         }

@@ -11,11 +11,15 @@ export {
 } from './images';
 export {
   addRecipe,
+  archiveRecipe,
   deleteRecipe,
   getAllRecipes,
+  getAllStoredRecipes,
+  getArchivedRecipes,
   getRecipe,
   searchRecipes,
   seedMockRecipes,
+  restoreRecipe,
   updateLastUsed,
   updateRecipe,
 } from './recipes';
