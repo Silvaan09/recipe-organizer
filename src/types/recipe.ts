@@ -56,10 +56,7 @@ export type RecipeUpdateInput = Partial<
     | 'imageIds'
     | 'archivedAt'
     | 'deletedAt'
-    | 'lastSyncedAt'
     | 'lastUsedAt'
-    | 'localUpdatedAt'
-    | 'syncStatus'
   >
 >;
 

@@ -1,6 +1,6 @@
 import { db } from './schema';
 import { generateRecipeImageThumbnail } from '../services/image';
-import { createLocalSyncMetadata } from '../services/sync';
+import { createLocalSyncMetadata, markSyncError, markSynced } from '../services/sync';
 import type { RecipeImage, RecipeImageThumbnail } from '../types/recipe';
 import { logger } from '../utils/logger';
 import { validateRecipeImage, validateRecipeImageThumbnail } from '../validation/dataValidation';
@@ -169,4 +169,43 @@ export async function deleteRecipeImagesByRecipeId(recipeId: string): Promise<vo
   const images = await getRecipeImagesByRecipeId(recipeId);
 
   await deleteRecipeImages(images.map((image) => image.id));
+}
+
+export async function markRecipeImagesSynced(
+  imageIds: string[],
+  timestamp = new Date().toISOString(),
+): Promise<void> {
+  if (imageIds.length === 0) {
+    return;
+  }
+
+  logger.debug('Marking recipe images synced', { imageIds, syncedAt: timestamp });
+
+  await db.transaction('rw', db.recipeImages, async () => {
+    await Promise.all(
+      imageIds.map((imageId) =>
+        db.recipeImages.update(imageId, {
+          ...markSynced(timestamp),
+          syncError: undefined,
+        }),
+      ),
+    );
+  });
+}
+
+export async function markRecipeImagesSyncError(
+  imageIds: string[],
+  errorMessage: string,
+): Promise<void> {
+  if (imageIds.length === 0) {
+    return;
+  }
+
+  logger.warn('Marking recipe image sync error', { imageIds, errorMessage });
+
+  await db.transaction('rw', db.recipeImages, async () => {
+    await Promise.all(
+      imageIds.map((imageId) => db.recipeImages.update(imageId, markSyncError(errorMessage))),
+    );
+  });
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { getAllRecipes, repairLocalDatabase, seedMockRecipes, updateLastUsed } from '../db';
+import { getAllRecipes, repairLocalDatabase, updateLastUsed } from '../db';
 import type { Recipe } from '../types/recipe';
 import type { RecipeSortMode, RecipeSortState } from '../types/sort';
 import { logAndReturnMessage } from '../utils/errors';
@@ -27,7 +27,6 @@ export function useRecipes({ searchQuery = '', sortMode = 'recentlyUsed' }: UseR
     async function loadRecipes() {
       try {
         setIsLoading(true);
-        await seedMockRecipes();
         await repairLocalDatabase();
         const nextRecipes = await getAllRecipes();
 

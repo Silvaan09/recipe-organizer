@@ -26,6 +26,7 @@ export function normalizeSyncMetadata(
     deletedAt: value.deletedAt,
     lastSyncedAt: value.lastSyncedAt,
     localUpdatedAt: value.localUpdatedAt ?? fallbackTimestamp,
+    syncError: value.syncError,
     syncStatus: isSyncStatus(value.syncStatus) ? value.syncStatus : 'local-only',
   };
 }
@@ -50,8 +51,9 @@ export function markSynced(timestamp = new Date().toISOString()): Pick<
   };
 }
 
-export function markSyncError(): Pick<SyncMetadata, 'syncStatus'> {
+export function markSyncError(errorMessage?: string): Pick<SyncMetadata, 'syncError' | 'syncStatus'> {
   return {
+    syncError: errorMessage,
     syncStatus: 'sync-error',
   };
 }

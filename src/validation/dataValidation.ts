@@ -87,6 +87,10 @@ export function validateRecipe(value: unknown): ValidationResult<Recipe> {
     errors.push('Recipe syncStatus is not supported.');
   }
 
+  if (value.syncError !== undefined && typeof value.syncError !== 'string') {
+    errors.push('Recipe syncError must be a string when present.');
+  }
+
   validateOptionalDateString(value.deletedAt, 'deletedAt', errors);
   validateOptionalDateString(value.lastSyncedAt, 'lastSyncedAt', errors);
   validateOptionalDateString(value.localUpdatedAt, 'localUpdatedAt', errors);
@@ -122,6 +126,7 @@ export function validateRecipe(value: unknown): ValidationResult<Recipe> {
           lastSyncedAt: typeof value.lastSyncedAt === 'string' ? value.lastSyncedAt : undefined,
           localUpdatedAt:
             typeof value.localUpdatedAt === 'string' ? value.localUpdatedAt : undefined,
+          syncError: typeof value.syncError === 'string' ? value.syncError : undefined,
           syncStatus: isSyncStatus(value.syncStatus) ? value.syncStatus : undefined,
         },
         String(value.updatedAt),
@@ -166,6 +171,10 @@ export function validateRecipeImage(value: unknown): ValidationResult<RecipeImag
     errors.push('Image syncStatus is not supported.');
   }
 
+  if (value.syncError !== undefined && typeof value.syncError !== 'string') {
+    errors.push('Image syncError must be a string when present.');
+  }
+
   validateOptionalDateString(value.deletedAt, 'image deletedAt', errors);
   validateOptionalDateString(value.lastSyncedAt, 'image lastSyncedAt', errors);
   validateOptionalDateString(value.localUpdatedAt, 'image localUpdatedAt', errors);
@@ -190,6 +199,7 @@ export function validateRecipeImage(value: unknown): ValidationResult<RecipeImag
           lastSyncedAt: typeof value.lastSyncedAt === 'string' ? value.lastSyncedAt : undefined,
           localUpdatedAt:
             typeof value.localUpdatedAt === 'string' ? value.localUpdatedAt : undefined,
+          syncError: typeof value.syncError === 'string' ? value.syncError : undefined,
           syncStatus: isSyncStatus(value.syncStatus) ? value.syncStatus : undefined,
         },
         String(value.createdAt),

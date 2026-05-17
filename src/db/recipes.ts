@@ -1,8 +1,6 @@
 import { deleteRecipeImagesByRecipeId } from './images';
-import { hasSeededMockRecipes, markMockRecipesSeeded } from './maintenance';
 import { db } from './schema';
-import { mockRecipes } from './seed';
-import { createLocalSyncMetadata, markLocalChange } from '../services/sync';
+import { createLocalSyncMetadata, markLocalChange, markSyncError, markSynced } from '../services/sync';
 import type { NewRecipeInput, Recipe, RecipeUpdateInput } from '../types/recipe';
 import { logger } from '../utils/logger';
 import { validateRecipe } from '../validation/dataValidation';
@@ -76,8 +74,6 @@ export async function updateRecipe(id: string, changes: RecipeUpdateInput): Prom
     imageIds: changes.imageIds ? [...changes.imageIds] : existingRecipe.imageIds,
     archivedAt: 'archivedAt' in changes ? changes.archivedAt : existingRecipe.archivedAt,
     deletedAt: 'deletedAt' in changes ? changes.deletedAt : existingRecipe.deletedAt,
-    lastSyncedAt:
-      'lastSyncedAt' in changes ? changes.lastSyncedAt : existingRecipe.lastSyncedAt,
     updatedAt: timestamp,
     ...markLocalChange(existingRecipe, timestamp),
   };
@@ -87,6 +83,14 @@ export async function updateRecipe(id: string, changes: RecipeUpdateInput): Prom
   if (!validation.ok) {
     throw new Error(validation.errors.join(' '));
   }
+
+  logger.debug('Recipe updated locally; marking user edit pending sync', {
+    recipeId: id,
+    previousSyncStatus: existingRecipe.syncStatus,
+    newSyncStatus: updatedRecipe.syncStatus,
+    localUpdatedAt: updatedRecipe.localUpdatedAt,
+    lastSyncedAt: updatedRecipe.lastSyncedAt,
+  });
 
   await db.recipes.put(validation.data);
 
@@ -191,21 +195,17 @@ export async function updateLastUsed(id: string): Promise<void> {
   });
 }
 
-export async function seedMockRecipes(): Promise<void> {
-  if (hasSeededMockRecipes()) {
-    return;
-  }
+export async function markRecipeSynced(id: string, timestamp = nowIso()): Promise<void> {
+  logger.debug('Marking recipe synced', { recipeId: id, syncedAt: timestamp });
 
-  const recipeCount = await db.recipes.count();
-
-  if (recipeCount > 0) {
-    markMockRecipesSeeded();
-    return;
-  }
-
-  await db.transaction('rw', db.recipes, async () => {
-    await Promise.all(mockRecipes.map((recipe) => addRecipe(recipe)));
+  await db.recipes.update(id, {
+    ...markSynced(timestamp),
+    syncError: undefined,
   });
+}
 
-  markMockRecipesSeeded();
+export async function markRecipeSyncError(id: string, errorMessage: string): Promise<void> {
+  logger.warn('Marking recipe sync error', { recipeId: id, errorMessage });
+
+  await db.recipes.update(id, markSyncError(errorMessage));
 }

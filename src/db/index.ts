@@ -8,6 +8,8 @@ export {
   getRecipeImage,
   getRecipeImageThumbnail,
   getRecipeImagesByRecipeId,
+  markRecipeImagesSynced,
+  markRecipeImagesSyncError,
 } from './images';
 export {
   addRecipe,
@@ -17,8 +19,9 @@ export {
   getAllStoredRecipes,
   getArchivedRecipes,
   getRecipe,
+  markRecipeSynced,
+  markRecipeSyncError,
   searchRecipes,
-  seedMockRecipes,
   restoreRecipe,
   updateLastUsed,
   updateRecipe,

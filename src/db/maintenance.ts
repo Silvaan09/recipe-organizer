@@ -8,8 +8,6 @@ import {
   validateRecipeImageThumbnail,
 } from '../validation/dataValidation';
 
-const MOCK_SEED_KEY = 'recipe-organizer.mock-seeded';
-
 export async function getAllRecipeImages(): Promise<RecipeImage[]> {
   const images = await db.recipeImages.toArray();
 
@@ -34,8 +32,6 @@ export async function clearLocalDatabase(): Promise<void> {
     await db.recipeImages.clear();
     await db.recipes.clear();
   });
-
-  localStorage.setItem(MOCK_SEED_KEY, 'true');
 }
 
 export async function replaceLocalDatabase(recipes: Recipe[], images: RecipeImage[]): Promise<void> {
@@ -65,16 +61,6 @@ export async function replaceLocalDatabase(recipes: Recipe[], images: RecipeImag
     await db.recipes.bulkPut(validRecipes);
     await db.recipeImages.bulkPut(validImages);
   });
-
-  localStorage.setItem(MOCK_SEED_KEY, 'true');
-}
-
-export function hasSeededMockRecipes() {
-  return localStorage.getItem(MOCK_SEED_KEY) === 'true';
-}
-
-export function markMockRecipesSeeded() {
-  localStorage.setItem(MOCK_SEED_KEY, 'true');
 }
 
 export type DatabaseRepairReport = {
