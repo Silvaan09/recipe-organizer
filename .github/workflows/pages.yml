@@ -1,0 +1,61 @@
+name: Build and Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: |
+          REPO_NAME=${GITHUB_REPOSITORY##*/}
+          if [[ "$REPO_NAME" == *.github.io ]]; then
+            echo "User/Org Pages detected; setting VITE_BASE_PATH=/"
+            export VITE_BASE_PATH=/
+          else
+            echo "Project Pages detected; setting VITE_BASE_PATH=/$REPO_NAME/"
+            export VITE_BASE_PATH=/$REPO_NAME/
+          fi
+          npm run build
+
+      - name: Create Pages fallback (if present)
+        run: |
+          if [ -f scripts/create-pages-fallback.mjs ]; then
+            node scripts/create-pages-fallback.mjs
+          fi
+
+      - name: Upload artifact for GitHub Pages
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: ./dist
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v1
