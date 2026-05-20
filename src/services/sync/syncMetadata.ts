@@ -4,6 +4,7 @@ export const SYNC_STATUSES = [
   'local-only',
   'pending-sync',
   'synced',
+  'sync-conflict',
   'sync-error',
 ] as const satisfies readonly SyncStatus[];
 
@@ -37,7 +38,10 @@ export function markLocalChange(
 ): Pick<SyncMetadata, 'localUpdatedAt' | 'syncStatus'> {
   return {
     localUpdatedAt: timestamp,
-    syncStatus: current.syncStatus === 'local-only' ? 'local-only' : 'pending-sync',
+    syncStatus:
+      current.syncStatus === 'local-only' || current.syncStatus === 'sync-conflict'
+        ? current.syncStatus
+        : 'pending-sync',
   };
 }
 
@@ -55,5 +59,14 @@ export function markSyncError(errorMessage?: string): Pick<SyncMetadata, 'syncEr
   return {
     syncError: errorMessage,
     syncStatus: 'sync-error',
+  };
+}
+
+export function markSyncConflict(
+  errorMessage?: string,
+): Pick<SyncMetadata, 'syncError' | 'syncStatus'> {
+  return {
+    syncError: errorMessage,
+    syncStatus: 'sync-conflict',
   };
 }

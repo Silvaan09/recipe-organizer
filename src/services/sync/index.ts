@@ -1,6 +1,7 @@
 export {
   createLocalSyncMetadata,
   isSyncStatus,
+  markSyncConflict,
   markLocalChange,
   markSynced,
   markSyncError,

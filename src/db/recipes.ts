@@ -1,6 +1,12 @@
 import { deleteRecipeImagesByRecipeId } from './images';
 import { db } from './schema';
-import { createLocalSyncMetadata, markLocalChange, markSyncError, markSynced } from '../services/sync';
+import {
+  createLocalSyncMetadata,
+  markLocalChange,
+  markSyncConflict,
+  markSyncError,
+  markSynced,
+} from '../services/sync';
 import type { NewRecipeInput, Recipe, RecipeUpdateInput } from '../types/recipe';
 import { logger } from '../utils/logger';
 import { validateRecipe } from '../validation/dataValidation';
@@ -57,7 +63,7 @@ export async function updateRecipe(id: string, changes: RecipeUpdateInput): Prom
   const timestamp = nowIso();
 
   if (!existingRecipe) {
-    throw new Error(`Recipe ${id} was not found.`);
+    throw new Error(`Rezept ${id} wurde nicht gefunden.`);
   }
 
   const updatedRecipe: Recipe = {
@@ -187,11 +193,9 @@ export async function searchRecipes(query: string): Promise<Recipe[]> {
 
 export async function updateLastUsed(id: string): Promise<void> {
   const timestamp = nowIso();
-  const existingRecipe = await getRecipe(id);
 
   await db.recipes.update(id, {
     lastUsedAt: timestamp,
-    ...(existingRecipe ? markLocalChange(existingRecipe, timestamp) : createLocalSyncMetadata(timestamp)),
   });
 }
 
@@ -208,4 +212,22 @@ export async function markRecipeSyncError(id: string, errorMessage: string): Pro
   logger.warn('Marking recipe sync error', { recipeId: id, errorMessage });
 
   await db.recipes.update(id, markSyncError(errorMessage));
+}
+
+export async function markRecipeSyncConflict(id: string, errorMessage: string): Promise<void> {
+  logger.warn('Marking recipe sync conflict', { recipeId: id, errorMessage });
+
+  await db.recipes.update(id, markSyncConflict(errorMessage));
+}
+
+export async function putSyncedRecipe(recipe: Recipe): Promise<Recipe> {
+  const validation = validateRecipe(recipe);
+
+  if (!validation.ok) {
+    throw new Error(validation.errors.join(' '));
+  }
+
+  await db.recipes.put(validation.data);
+
+  return validation.data;
 }

@@ -42,16 +42,16 @@ export function RecipeForm({ initialRecipe, onCancel, onSaved }: RecipeFormProps
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-petal-600">
-            {initialRecipe ? 'Edit recipe' : 'New recipe'}
+            {initialRecipe ? 'Rezept bearbeiten' : 'Neues Rezept'}
           </p>
           <h2 className="mt-1 text-2xl font-bold">
-            {initialRecipe ? initialRecipe.title : 'Add a tasty idea'}
+            {initialRecipe ? initialRecipe.title : 'Eine leckere Idee hinzufügen'}
           </h2>
         </div>
         <button
           type="button"
           className="grid size-10 shrink-0 place-items-center rounded-lg text-petal-700 transition hover:bg-petal-50"
-          aria-label="Close recipe form"
+          aria-label="Rezeptformular schließen"
           onClick={onCancel}
         >
           <X aria-hidden="true" size={20} />
@@ -61,14 +61,14 @@ export function RecipeForm({ initialRecipe, onCancel, onSaved }: RecipeFormProps
       <div className="mt-6 flex flex-col gap-5">
         <ImageUploadInput
           cropMode="display"
-          description="This optional image appears on recipe cards and search results."
+          description="Dieses optionale Bild erscheint auf Rezeptkarten und in Suchergebnissen."
           error={errors.previewImage}
           images={previewImageDrafts}
           multiple={false}
           previewAspectClass="aspect-[4/3]"
-          title="Display preview image"
-          uploadLabel="One display image"
-          cameraLabel="Capture one"
+          title="Anzeigebild"
+          uploadLabel="Ein Anzeigebild"
+          cameraLabel="Ein Foto aufnehmen"
           onAddFiles={(files) => addImageFiles('preview', files)}
           onCropImage={(tempId, cropArea) => cropImage('preview', tempId, cropArea)}
           onMoveImage={(tempId, direction) => moveImage('preview', tempId, direction)}
@@ -76,9 +76,9 @@ export function RecipeForm({ initialRecipe, onCancel, onSaved }: RecipeFormProps
         />
 
         <TextInput
-          label="Title"
+          label="Titel"
           value={title}
-          placeholder="Rosemary tomato pasta"
+          placeholder="Rosmarin-Tomaten-Pasta"
           error={errors.title}
           onChange={(event) => setTitle(event.target.value)}
         />
@@ -91,13 +91,13 @@ export function RecipeForm({ initialRecipe, onCancel, onSaved }: RecipeFormProps
 
         <ImageUploadInput
           cropMode="recipe"
-          description="These images appear only in the full recipe gallery."
+          description="Diese Bilder erscheinen nur in der vollständigen Rezeptgalerie."
           error={errors.images}
           images={imageDrafts}
           previewAspectClass="aspect-[4/3]"
-          title="Recipe gallery images"
-          uploadLabel="Multiple photos"
-          cameraLabel="Phone capture"
+          title="Bilder für die Rezeptgalerie"
+          uploadLabel="Mehrere Fotos"
+          cameraLabel="Mit dem Handy aufnehmen"
           onAddFiles={(files) => addImageFiles('recipe', files)}
           onCropImage={(tempId, cropArea) => cropImage('recipe', tempId, cropArea)}
           onMoveImage={(tempId, direction) => moveImage('recipe', tempId, direction)}
@@ -112,14 +112,14 @@ export function RecipeForm({ initialRecipe, onCancel, onSaved }: RecipeFormProps
           disabled={isSaving || isProcessingImages}
         >
           <Save aria-hidden="true" size={18} />
-          {isSaving ? 'Saving' : isProcessingImages ? 'Optimizing' : 'Save recipe'}
+          {isSaving ? 'Speichern' : isProcessingImages ? 'Optimieren' : 'Rezept speichern'}
         </button>
         <button
           type="button"
           className="min-h-12 rounded-lg border border-petal-100 bg-white px-4 text-sm font-bold text-petal-700 shadow-soft transition hover:bg-petal-50"
           onClick={onCancel}
         >
-          Cancel
+          Abbrechen
         </button>
       </div>
     </form>

@@ -41,7 +41,7 @@ export type ValidatedBackup = {
 
 function validateBackupImage(value: unknown): BackupImageRecord {
   if (!isRecord(value)) {
-    throw new Error('Backup contains an invalid image.');
+    throw new Error('Backup enthält ein ungültiges Bild.');
   }
 
   const image = value;
@@ -55,11 +55,11 @@ function validateBackupImage(value: unknown): BackupImageRecord {
     typeof image.createdAt !== 'string' ||
     typeof image.dataBase64 !== 'string'
   ) {
-    throw new Error('Backup contains an image with missing fields.');
+    throw new Error('Backup enthält ein Bild mit fehlenden Feldern.');
   }
 
   if (!image.id.trim() || !image.recipeId.trim()) {
-    throw new Error('Backup contains an image without an id or recipe relationship.');
+    throw new Error('Backup enthält ein Bild ohne ID oder Rezeptzuordnung.');
   }
 
   return {
@@ -88,22 +88,22 @@ function validateBackupShape(value: unknown): Omit<BackupFile, 'recipes' | 'imag
   images: BackupImageRecord[];
 } {
   if (!isRecord(value)) {
-    throw new Error('Backup file is not valid JSON data.');
+    throw new Error('Backup-Datei enthält keine gültigen JSON-Daten.');
   }
 
   if (value.format !== BACKUP_FORMAT || value.version !== BACKUP_VERSION) {
-    throw new Error('Backup file format is not supported.');
+    throw new Error('Backup-Dateiformat wird nicht unterstützt.');
   }
 
   if (typeof value.exportedAt !== 'string' || !Array.isArray(value.recipes) || !Array.isArray(value.images)) {
-    throw new Error('Backup file is missing required sections.');
+    throw new Error('Backup-Datei enthält nicht alle erforderlichen Bereiche.');
   }
 
   const recipes = value.recipes.map((recipe) => {
     const validation = validateRecipe(recipe);
 
     if (!validation.ok) {
-      throw new Error(`Backup contains an invalid recipe: ${validation.errors.join(' ')}`);
+      throw new Error(`Backup enthält ein ungültiges Rezept: ${validation.errors.join(' ')}`);
     }
 
     return validation.data;
@@ -114,12 +114,12 @@ function validateBackupShape(value: unknown): Omit<BackupFile, 'recipes' | 'imag
   const recipeIdSet = new Set(recipeIds);
   const imageIdSet = new Set(imageIds);
 
-  assertUniqueIds(recipeIds, 'recipe ids');
-  assertUniqueIds(imageIds, 'image ids');
+  assertUniqueIds(recipeIds, 'Rezept-IDs');
+  assertUniqueIds(imageIds, 'Bild-IDs');
 
   images.forEach((image) => {
     if (!recipeIdSet.has(image.recipeId)) {
-      throw new Error(`Image ${image.id} references a missing recipe.`);
+      throw new Error(`Bild ${image.id} verweist auf ein fehlendes Rezept.`);
     }
   });
 
@@ -128,13 +128,13 @@ function validateBackupShape(value: unknown): Omit<BackupFile, 'recipes' | 'imag
       .filter((imageId): imageId is string => Boolean(imageId))
       .forEach((imageId) => {
       if (!imageIdSet.has(imageId)) {
-        throw new Error(`Recipe ${recipe.title} references a missing image.`);
+        throw new Error(`Rezept ${recipe.title} verweist auf ein fehlendes Bild.`);
       }
 
       const image = images.find((backupImage) => backupImage.id === imageId);
 
       if (image?.recipeId !== recipe.id) {
-        throw new Error(`Image ${imageId} is linked to the wrong recipe.`);
+        throw new Error(`Bild ${imageId} ist mit dem falschen Rezept verknüpft.`);
       }
     });
   });
@@ -143,7 +143,7 @@ function validateBackupShape(value: unknown): Omit<BackupFile, 'recipes' | 'imag
     const recipe = recipes.find((backupRecipe) => backupRecipe.id === image.recipeId);
 
     if (!recipe || (!recipe.imageIds.includes(image.id) && recipe.previewImageId !== image.id)) {
-      throw new Error(`Image ${image.id} is not referenced by its recipe.`);
+      throw new Error(`Bild ${image.id} wird vom Rezept nicht referenziert.`);
     }
   });
 
@@ -164,14 +164,14 @@ function blobToBase64(blob: Blob): Promise<string> {
       const result = reader.result;
 
       if (typeof result !== 'string') {
-        reject(new Error('Image data could not be read.'));
+        reject(new Error('Bilddaten konnten nicht gelesen werden.'));
         return;
       }
 
       resolve(result.split(',')[1] ?? '');
     };
 
-    reader.onerror = () => reject(new Error('Image data could not be read.'));
+    reader.onerror = () => reject(new Error('Bilddaten konnten nicht gelesen werden.'));
     reader.readAsDataURL(blob);
   });
 }
@@ -182,7 +182,7 @@ function base64ToBlob(base64: string, mimeType: string) {
   try {
     binary = atob(base64);
   } catch {
-    throw new Error('Backup contains invalid image data.');
+    throw new Error('Backup enthält ungültige Bilddaten.');
   }
 
   const bytes = new Uint8Array(binary.length);
@@ -204,10 +204,10 @@ function readTextFile(file: File): Promise<string> {
         return;
       }
 
-      reject(new Error('Backup file could not be read.'));
+      reject(new Error('Backup-Datei konnte nicht gelesen werden.'));
     };
 
-    reader.onerror = () => reject(new Error('Backup file could not be read.'));
+    reader.onerror = () => reject(new Error('Backup-Datei konnte nicht gelesen werden.'));
     reader.readAsText(file);
   });
 }
@@ -238,7 +238,7 @@ export async function createBackupFile(): Promise<BackupFile> {
         const localImage = getLocalRecipeImage(imageId);
 
         if (!localImage) {
-          throw new Error(`Recipe ${recipe.title} references an image that could not be exported.`);
+          throw new Error(`Rezept ${recipe.title} verweist auf ein Bild, das nicht exportiert werden konnte.`);
         }
 
         const response = await fetch(localImage.src);
@@ -310,7 +310,7 @@ export async function validateBackupFile(file: File): Promise<ValidatedBackup> {
   try {
     parsedJson = JSON.parse(text);
   } catch {
-    throw new Error('Backup file is not valid JSON.');
+    throw new Error('Backup-Datei ist kein gültiges JSON.');
   }
 
   const parsedBackup = validateBackupShape(parsedJson);
@@ -328,7 +328,7 @@ export async function validateBackupFile(file: File): Promise<ValidatedBackup> {
     const validation = validateRecipeImage(image);
 
     if (!validation.ok) {
-      throw new Error(`Backup contains an invalid image: ${validation.errors.join(' ')}`);
+      throw new Error(`Backup enthält ein ungültiges Bild: ${validation.errors.join(' ')}`);
     }
   });
 

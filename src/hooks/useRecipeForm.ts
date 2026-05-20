@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { addRecipe, addRecipeImages, deleteRecipeImages, getRecipeImage, updateRecipe } from '../db';
+import { addRecipe, addRecipeImages, deleteRecipeImages, getRecipe, getRecipeImage, updateRecipe } from '../db';
+import { useAuth } from '../firebase';
+import { uploadSingleRecipeToFirebase } from '../services/cloudSync';
 import { processRecipeImage, type ImageCropArea } from '../services/image';
 import type { Recipe, RecipeImagePosition } from '../types/recipe';
 import { logger } from '../utils/logger';
@@ -70,7 +72,7 @@ function loadImageElement(file: Blob): Promise<HTMLImageElement> {
     };
     imageElement.onerror = () => {
       URL.revokeObjectURL(objectUrl);
-      reject(new Error('Image could not be loaded.'));
+      reject(new Error('Bild konnte nicht geladen werden.'));
     };
     imageElement.src = objectUrl;
   });
@@ -153,6 +155,7 @@ function mapDraftsToImageIds(drafts: ImageDraft[], newImageIdsByTempId: Map<stri
 }
 
 export function useRecipeForm({ initialRecipe, onSaved }: UseRecipeFormOptions) {
+  const { currentUser, isFirebaseConfigured } = useAuth();
   const [title, setTitle] = useState(initialRecipe?.title ?? '');
   const [keywordText, setKeywordText] = useState(initialRecipe?.keywords.join(', ') ?? '');
   const [previewImageDrafts, setPreviewImageDrafts] = useState<ImageDraft[]>([]);
@@ -217,6 +220,26 @@ export function useRecipeForm({ initialRecipe, onSaved }: UseRecipeFormOptions) 
     (draft) => draft.status === 'processing',
   );
 
+  const uploadSavedRecipeIfPossible = useCallback(
+    async (recipe: Recipe) => {
+      if (!isFirebaseConfigured || !currentUser) {
+        return recipe;
+      }
+
+      try {
+        await uploadSingleRecipeToFirebase(recipe.id);
+      } catch (error) {
+        logger.warn('Automatic recipe upload failed after save.', {
+          error,
+          recipeId: recipe.id,
+        });
+      }
+
+      return (await getRecipe(recipe.id)) ?? recipe;
+    },
+    [currentUser, isFirebaseConfigured],
+  );
+
   const replaceDraftWithProcessedImage = useCallback(
     async (
       target: 'preview' | 'recipe',
@@ -278,7 +301,7 @@ export function useRecipeForm({ initialRecipe, onSaved }: UseRecipeFormOptions) 
                   error:
                     processingError instanceof Error
                       ? processingError.message
-                      : 'Image could not be optimized.',
+                      : 'Bild konnte nicht optimiert werden.',
                   status: 'error' as const,
                 }
               : draft,
@@ -398,12 +421,12 @@ export function useRecipeForm({ initialRecipe, onSaved }: UseRecipeFormOptions) 
     const normalizedTitle = title.trim();
 
     if (!normalizedTitle) {
-      setErrors({ title: 'Title is required.' });
+      setErrors({ title: 'Titel ist erforderlich.' });
       return;
     }
 
     if (isProcessingImages) {
-      setErrors({ images: 'Please wait for image optimization to finish.' });
+      setErrors({ images: 'Bitte warte, bis die Bildoptimierung abgeschlossen ist.' });
       return;
     }
 
@@ -447,7 +470,7 @@ export function useRecipeForm({ initialRecipe, onSaved }: UseRecipeFormOptions) 
         const removedImageIds = previousImageIds.filter((imageId) => !currentImageIds.includes(imageId));
 
         await deleteRecipeImages(removedImageIds);
-        onSaved(savedRecipe);
+        onSaved(await uploadSavedRecipeIfPossible(savedRecipe));
         return;
       }
 
@@ -482,7 +505,7 @@ export function useRecipeForm({ initialRecipe, onSaved }: UseRecipeFormOptions) 
             })
           : savedRecipeWithoutImages;
 
-      onSaved(savedRecipe);
+      onSaved(await uploadSavedRecipeIfPossible(savedRecipe));
     } finally {
       setIsSaving(false);
     }
@@ -494,6 +517,7 @@ export function useRecipeForm({ initialRecipe, onSaved }: UseRecipeFormOptions) 
     onSaved,
     previewImageDrafts,
     title,
+    uploadSavedRecipeIfPossible,
   ]);
 
   return {

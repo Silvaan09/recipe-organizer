@@ -16,6 +16,7 @@ export type FirebaseSyncPlan = {
   imagesMarkedDeleted: number;
   imagesPendingSync: number;
   recipePlan: SyncPlanItem[];
+  recipesInConflict: number;
   recipesMarkedDeleted: number;
   recipesPendingSync: number;
   totalImages: number;
@@ -34,18 +35,18 @@ function shouldSyncRecord(record: Pick<Recipe | RecipeImage, 'deletedAt' | 'sync
 
 function getPlanReason(record: Pick<Recipe | RecipeImage, 'deletedAt' | 'syncStatus'>) {
   if (record.deletedAt) {
-    return 'marked deleted';
+    return 'als gelöscht markiert';
   }
 
   if (record.syncStatus === 'local-only') {
-    return 'local-only';
+    return 'nur lokal';
   }
 
   if (record.syncStatus === 'sync-error') {
-    return 'previous sync error';
+    return 'vorheriger Sync-Fehler';
   }
 
-  return 'pending sync';
+  return 'Sync ausstehend';
 }
 
 function estimateRecipeSize(recipe: Recipe) {
@@ -53,19 +54,23 @@ function estimateRecipeSize(recipe: Recipe) {
 }
 
 function formatRecipeTitle(recipe: Recipe) {
-  return recipe.deletedAt ? `${recipe.title} (deleted)` : recipe.title;
+  return recipe.deletedAt ? `${recipe.title} (gelöscht)` : recipe.title;
 }
 
 export async function createFirebaseSyncPlan(): Promise<FirebaseSyncPlan> {
   const [recipes, images] = await Promise.all([getAllStoredRecipes(), getAllRecipeImages()]);
   const recipesToSync = recipes.filter(shouldSyncRecord);
   const imagesToSync = images.filter(shouldSyncRecord);
+  const recipesInConflict = recipes.filter((recipe) => recipe.syncStatus === 'sync-conflict').length;
   const estimatedUploadSize =
     recipesToSync.reduce((totalSize, recipe) => totalSize + estimateRecipeSize(recipe), 0) +
     imagesToSync.reduce((totalSize, image) => totalSize + image.size, 0);
   const warnings = [
-    'Dry run only: no Firestore documents will be written.',
-    'Dry run only: no Firebase Storage files will be uploaded.',
+    'Nur Testlauf: Es werden keine Firestore-Dokumente geschrieben.',
+    'Nur Testlauf: Es werden keine Firebase-Storage-Dateien hochgeladen.',
+    ...(recipesInConflict > 0
+      ? [`${recipesInConflict} Rezeptkonflikt${recipesInConflict === 1 ? '' : 'e'} müssen geprüft werden.`]
+      : []),
   ];
 
   return {
@@ -85,6 +90,7 @@ export async function createFirebaseSyncPlan(): Promise<FirebaseSyncPlan> {
       syncStatus: recipe.syncStatus,
       title: formatRecipeTitle(recipe),
     })),
+    recipesInConflict,
     recipesMarkedDeleted: recipes.filter((recipe) => recipe.deletedAt).length,
     recipesPendingSync: recipesToSync.length,
     totalImages: images.length,

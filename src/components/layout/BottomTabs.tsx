@@ -9,8 +9,8 @@ type BottomTabsProps = {
 };
 
 const tabs = [
-  { id: 'home', label: 'Home', icon: Home },
-  { id: 'recipes', label: 'Recipes', icon: BookOpen },
+  { id: 'home', label: 'Start', icon: Home },
+  { id: 'recipes', label: 'Rezepte', icon: BookOpen },
 ] satisfies Array<{
   id: AppTab;
   label: string;

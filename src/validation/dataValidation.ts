@@ -23,7 +23,7 @@ function normalizeKeywordList(values: string[]) {
 
 function validateDateString(value: unknown, fieldName: string, errors: string[]) {
   if (typeof value !== 'string' || Number.isNaN(Date.parse(value))) {
-    errors.push(`${fieldName} must be a valid date string.`);
+    errors.push(`${fieldName} muss ein gültiges Datum sein.`);
   }
 }
 
@@ -41,32 +41,32 @@ export function validateRecipe(value: unknown): ValidationResult<Recipe> {
   const errors: string[] = [];
 
   if (!isRecord(value)) {
-    return { errors: ['Recipe must be an object.'], ok: false };
+    return { errors: ['Rezept muss ein Objekt sein.'], ok: false };
   }
 
   if (typeof value.id !== 'string' || !value.id.trim()) {
-    errors.push('Recipe id is required.');
+    errors.push('Rezept-ID ist erforderlich.');
   }
 
   if (typeof value.title !== 'string' || !value.title.trim()) {
-    errors.push('Recipe title is required.');
+    errors.push('Rezepttitel ist erforderlich.');
   }
 
   if (!isStringArray(value.keywords)) {
-    errors.push('Recipe keywords must be an array of strings.');
+    errors.push('Rezept-Stichwörter müssen eine Textliste sein.');
   }
 
   if (!isStringArray(value.imageIds)) {
-    errors.push('Recipe imageIds must be an array of strings.');
+    errors.push('Rezept-Bild-IDs müssen eine Textliste sein.');
   } else if (new Set(value.imageIds).size !== value.imageIds.length) {
-    errors.push('Recipe imageIds must be unique.');
+    errors.push('Rezept-Bild-IDs müssen eindeutig sein.');
   }
 
   if (
     value.previewImageId !== undefined &&
     (typeof value.previewImageId !== 'string' || !value.previewImageId.trim())
   ) {
-    errors.push('Recipe previewImageId must be a non-empty string when present.');
+    errors.push('Rezept-Vorschaubild-ID muss ein nicht leerer Text sein.');
   }
 
   if (value.previewImagePosition !== undefined) {
@@ -75,7 +75,7 @@ export function validateRecipe(value: unknown): ValidationResult<Recipe> {
       !validatePercent(value.previewImagePosition.x) ||
       !validatePercent(value.previewImagePosition.y)
     ) {
-      errors.push('Recipe previewImagePosition must contain x and y values between 0 and 100.');
+      errors.push('Rezept-Vorschaubildposition muss x- und y-Werte zwischen 0 und 100 enthalten.');
     }
   }
 
@@ -84,11 +84,11 @@ export function validateRecipe(value: unknown): ValidationResult<Recipe> {
   }
 
   if (value.syncStatus !== undefined && !isSyncStatus(value.syncStatus)) {
-    errors.push('Recipe syncStatus is not supported.');
+    errors.push('Rezept-Sync-Status wird nicht unterstützt.');
   }
 
   if (value.syncError !== undefined && typeof value.syncError !== 'string') {
-    errors.push('Recipe syncError must be a string when present.');
+    errors.push('Rezept-Sync-Fehler muss Text sein.');
   }
 
   validateOptionalDateString(value.deletedAt, 'deletedAt', errors);
@@ -140,39 +140,39 @@ export function validateRecipeImage(value: unknown): ValidationResult<RecipeImag
   const errors: string[] = [];
 
   if (!isRecord(value)) {
-    return { errors: ['Recipe image must be an object.'], ok: false };
+    return { errors: ['Rezeptbild muss ein Objekt sein.'], ok: false };
   }
 
   if (typeof value.id !== 'string' || !value.id.trim()) {
-    errors.push('Image id is required.');
+    errors.push('Bild-ID ist erforderlich.');
   }
 
   if (typeof value.recipeId !== 'string' || !value.recipeId.trim()) {
-    errors.push('Image recipeId is required.');
+    errors.push('Bild-Rezept-ID ist erforderlich.');
   }
 
   if (!(value.blob instanceof Blob)) {
-    errors.push('Image blob is required.');
+    errors.push('Bilddatei ist erforderlich.');
   }
 
   if (typeof value.fileName !== 'string' || !value.fileName.trim()) {
-    errors.push('Image fileName is required.');
+    errors.push('Bilddateiname ist erforderlich.');
   }
 
   if (typeof value.mimeType !== 'string' || !value.mimeType.trim()) {
-    errors.push('Image mimeType is required.');
+    errors.push('Bild-MIME-Typ ist erforderlich.');
   }
 
   if (typeof value.size !== 'number' || value.size < 0) {
-    errors.push('Image size must be a positive number.');
+    errors.push('Bildgröße muss eine positive Zahl sein.');
   }
 
   if (value.syncStatus !== undefined && !isSyncStatus(value.syncStatus)) {
-    errors.push('Image syncStatus is not supported.');
+    errors.push('Bild-Sync-Status wird nicht unterstützt.');
   }
 
   if (value.syncError !== undefined && typeof value.syncError !== 'string') {
-    errors.push('Image syncError must be a string when present.');
+    errors.push('Bild-Sync-Fehler muss Text sein.');
   }
 
   validateOptionalDateString(value.deletedAt, 'image deletedAt', errors);
@@ -213,27 +213,27 @@ export function validateRecipeImageThumbnail(value: unknown): ValidationResult<R
   const errors: string[] = [];
 
   if (!isRecord(value)) {
-    return { errors: ['Recipe image thumbnail must be an object.'], ok: false };
+    return { errors: ['Rezeptbild-Thumbnail muss ein Objekt sein.'], ok: false };
   }
 
   if (typeof value.id !== 'string' || !value.id.trim()) {
-    errors.push('Thumbnail id is required.');
+    errors.push('Thumbnail-ID ist erforderlich.');
   }
 
   if (typeof value.recipeId !== 'string' || !value.recipeId.trim()) {
-    errors.push('Thumbnail recipeId is required.');
+    errors.push('Thumbnail-Rezept-ID ist erforderlich.');
   }
 
   if (!(value.blob instanceof Blob)) {
-    errors.push('Thumbnail blob is required.');
+    errors.push('Thumbnail-Datei ist erforderlich.');
   }
 
   if (typeof value.mimeType !== 'string' || !value.mimeType.trim()) {
-    errors.push('Thumbnail mimeType is required.');
+    errors.push('Thumbnail-MIME-Typ ist erforderlich.');
   }
 
   if (typeof value.size !== 'number' || value.size < 0) {
-    errors.push('Thumbnail size must be a positive number.');
+    errors.push('Thumbnail-Größe muss eine positive Zahl sein.');
   }
 
   validateDateString(value.createdAt, 'thumbnail createdAt', errors);
@@ -257,6 +257,6 @@ export function validateRecipeImageThumbnail(value: unknown): ValidationResult<R
 
 export function assertUniqueIds(ids: string[], label: string) {
   if (new Set(ids).size !== ids.length) {
-    throw new Error(`Duplicate ${label} are not allowed.`);
+    throw new Error(`Doppelte ${label} sind nicht erlaubt.`);
   }
 }

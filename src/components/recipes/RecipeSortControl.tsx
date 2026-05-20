@@ -9,8 +9,8 @@ type RecipeSortControlProps = {
 
 const sortOptions = [
   { label: 'A-Z', value: 'alphabetical' },
-  { label: 'Creation Date', value: 'recentlyCreated' },
-  { label: 'Recently Cooked', value: 'recentlyUsed' },
+  { label: 'Erstellt', value: 'recentlyCreated' },
+  { label: 'Zuletzt gekocht', value: 'recentlyUsed' },
 ] satisfies Array<{ label: string; value: RecipeSortMode }>;
 
 export function RecipeSortControl({ onChange, value }: RecipeSortControlProps) {

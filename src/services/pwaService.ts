@@ -4,8 +4,10 @@ export function registerServiceWorker() {
   }
 
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch((error: unknown) => {
-      console.warn('Service worker registration failed', error);
-    });
+    navigator.serviceWorker
+      .register(`${import.meta.env.BASE_URL}sw.js`, { scope: import.meta.env.BASE_URL })
+      .catch((error: unknown) => {
+        console.warn('Service worker registration failed', error);
+      });
   });
 }

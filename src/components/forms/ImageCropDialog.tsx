@@ -65,7 +65,7 @@ function loadImageSize(sourceUrl: string): Promise<ImageSize> {
         width: imageElement.naturalWidth,
       });
     };
-    imageElement.onerror = () => reject(new Error('Image could not be loaded.'));
+    imageElement.onerror = () => reject(new Error('Bild konnte nicht geladen werden.'));
     imageElement.src = sourceUrl;
   });
 }
@@ -90,7 +90,7 @@ function createRotatedPreviewUrl(sourceUrl: string, rotation: number): Promise<s
       const context = canvas.getContext('2d', { alpha: false });
 
       if (!context) {
-        reject(new Error('Image rotation is not supported in this browser.'));
+        reject(new Error('Bilddrehung wird in diesem Browser nicht unterstützt.'));
         return;
       }
 
@@ -107,14 +107,14 @@ function createRotatedPreviewUrl(sourceUrl: string, rotation: number): Promise<s
       );
       canvas.toBlob((blob) => {
         if (!blob) {
-          reject(new Error('Image preview could not be rotated.'));
+          reject(new Error('Bildvorschau konnte nicht gedreht werden.'));
           return;
         }
 
         resolve(URL.createObjectURL(blob));
       }, 'image/jpeg');
     };
-    imageElement.onerror = () => reject(new Error('Image could not be loaded.'));
+    imageElement.onerror = () => reject(new Error('Bild konnte nicht geladen werden.'));
     imageElement.src = sourceUrl;
   });
 }
@@ -181,7 +181,7 @@ export function ImageCropDialog({
         }
       } catch {
         if (isMounted) {
-          setPreviewError('Image preview could not be loaded.');
+          setPreviewError('Bildvorschau konnte nicht geladen werden.');
         }
       }
     }
@@ -208,7 +208,7 @@ export function ImageCropDialog({
       <div className="max-h-[calc(100dvh-1.5rem)] w-full max-w-screen-sm overflow-y-auto rounded-lg bg-white shadow-2xl">
         <div className="border-b border-petal-100 p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-petal-600">
-            {cropMode === 'display' ? 'Crop display image' : 'Crop recipe image'}
+            {cropMode === 'display' ? 'Anzeigebild zuschneiden' : 'Rezeptbild zuschneiden'}
           </p>
           <h3 className="mt-1 text-lg font-bold text-cocoa-900">{image.alt}</h3>
         </div>
@@ -236,7 +236,7 @@ export function ImageCropDialog({
                 onClick={() => rotateImage('left')}
               >
                 <RotateCcw aria-hidden="true" size={18} />
-                Rotate left
+                Nach links drehen
               </button>
               <button
                 type="button"
@@ -244,7 +244,7 @@ export function ImageCropDialog({
                 onClick={() => rotateImage('right')}
               >
                 <RotateCw aria-hidden="true" size={18} />
-                Rotate right
+                Nach rechts drehen
               </button>
             </div>
           ) : null}
@@ -265,14 +265,14 @@ export function ImageCropDialog({
                 onClose();
               }}
             >
-              {isApplying ? 'Cropping' : 'Apply crop'}
+              {isApplying ? 'Zuschneiden' : 'Zuschnitt anwenden'}
             </button>
             <button
               type="button"
               className="min-h-12 rounded-lg border border-petal-100 bg-white px-4 text-sm font-bold text-petal-700 shadow-soft transition hover:bg-petal-50"
               onClick={onClose}
             >
-              Cancel
+              Abbrechen
             </button>
           </div>
         </div>
@@ -512,7 +512,7 @@ function EdgeCropEditor({ imageSize, imageUrl, onCropAreaChange }: EdgeCropEdito
           <button
             type="button"
             className="absolute inset-0 cursor-move touch-none"
-            aria-label="Move crop box"
+            aria-label="Zuschnitt verschieben"
             onPointerDown={(event) => startDrag('move', event)}
           />
           {handles.map(({ className, handle }) => (
@@ -520,7 +520,7 @@ function EdgeCropEditor({ imageSize, imageUrl, onCropAreaChange }: EdgeCropEdito
               key={handle}
               type="button"
               className={`absolute z-10 size-6 touch-none rounded-full border-2 border-white bg-petal-500 shadow-soft ${className}`}
-              aria-label={`Resize crop box ${handle}`}
+              aria-label={`Zuschnittgröße ändern ${handle}`}
               onPointerDown={(event) => startDrag(handle, event)}
             />
           ))}

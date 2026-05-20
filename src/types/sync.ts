@@ -1,4 +1,9 @@
-export type SyncStatus = 'local-only' | 'pending-sync' | 'synced' | 'sync-error';
+export type SyncStatus =
+  | 'local-only'
+  | 'pending-sync'
+  | 'synced'
+  | 'sync-conflict'
+  | 'sync-error';
 
 export type SyncMetadata = {
   deletedAt?: string;

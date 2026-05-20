@@ -35,10 +35,10 @@ export function HomePage({ onAddRecipe, onOpenRecipe }: HomePageProps) {
       <RecipeSearchBar value={searchQuery} onChange={setSearchQuery} />
 
       <section className="rounded-lg bg-gradient-to-br from-petal-400 via-petal-300 to-herb-100 p-5 text-white shadow-soft motion-safe:animate-[fade-in_220ms_ease-out]">
-        <p className="text-sm font-semibold text-white/85">Welcome back</p>
-        <h2 className="mt-2 font-serif text-3xl font-bold leading-tight">Find a favorite bite fast.</h2>
+        <p className="text-sm font-semibold text-white/85">Willkommen zurück</p>
+        <h2 className="mt-2 font-serif text-3xl font-bold leading-tight">Finde dein Lieblingsrezept</h2>
         <p className="mt-3 max-w-sm text-sm leading-6 text-white/85">
-          Search your local recipe box or jump back into something you used recently.
+          Durchsuche deine lokale Rezeptbox oder öffne ein zuletzt verwendetes Rezept.
         </p>
       </section>
 
@@ -52,10 +52,10 @@ export function HomePage({ onAddRecipe, onOpenRecipe }: HomePageProps) {
         <div className="flex items-end justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-petal-600">
-              {isSearching ? 'Search results' : 'Recently used'}
+              {isSearching ? 'Suchergebnisse' : 'Zuletzt verwendet'}
             </p>
             <h2 className="mt-1 text-xl font-bold">
-              {isSearching ? `Matches for "${searchQuery}"` : 'Cook again soon'}
+              {isSearching ? `Treffer für "${searchQuery}"` : 'Bald wieder kochen'}
             </h2>
           </div>
           <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-petal-700 shadow-soft">
@@ -72,16 +72,16 @@ export function HomePage({ onAddRecipe, onOpenRecipe }: HomePageProps) {
                 onClick={onAddRecipe}
               >
                 <Plus aria-hidden="true" size={18} />
-                Add recipe
+                Rezept hinzufügen
               </button>
             ) : undefined
           }
           emptyLabel={
             isSearching
-              ? 'No local recipes matched that search. Try a title, ingredient, or tag.'
-              : 'Save your first cozy recipe and it will stay available offline.'
+              ? 'Keine lokalen Rezepte passen zu dieser Suche. Probiere einen Titel, eine Zutat oder ein Stichwort.'
+              : 'Speichere dein erstes Rezept und es bleibt offline verfügbar.'
           }
-          emptyTitle={isSearching ? 'No matches' : 'Start your recipe book'}
+          emptyTitle={isSearching ? 'Keine Treffer' : 'Starte dein Rezeptbuch'}
           isLoading={isLoading}
           recipes={displayedRecipes}
           onRecipeClick={handleRecipeClick}

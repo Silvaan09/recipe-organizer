@@ -55,7 +55,7 @@ export function useRecipeImagePreview(
 
       objectUrl = createBlobUrl(storedImage.blob);
       setStoredPreview({
-        alt: 'Recipe image thumbnail',
+        alt: 'Rezeptbild-Thumbnail',
         imageId,
         src: objectUrl,
       });

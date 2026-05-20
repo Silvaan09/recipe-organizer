@@ -36,7 +36,7 @@ export function useRecipes({ searchQuery = '', sortMode = 'recentlyUsed' }: UseR
         }
       } catch (loadError) {
         if (isMounted) {
-          setError(logAndReturnMessage(loadError, 'Recipes could not be loaded.'));
+          setError(logAndReturnMessage(loadError, 'Rezepte konnten nicht geladen werden.'));
         }
       } finally {
         if (isMounted) {

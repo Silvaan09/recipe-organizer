@@ -34,7 +34,7 @@ export type UploadRecipeResult = {
 };
 
 function getReadableError(error: unknown) {
-  return error instanceof Error ? error.message : 'Recipe upload failed.';
+  return error instanceof Error ? error.message : 'Rezept-Upload fehlgeschlagen.';
 }
 
 function getReferencedImageIds(recipe: Recipe) {
@@ -64,7 +64,7 @@ async function uploadRecipeImage(
   image: RecipeImage,
 ): Promise<UploadedRecipeImage> {
   if (!firebaseStorage) {
-    throw new Error('Firebase Storage is not configured.');
+    throw new Error('Firebase Storage ist nicht konfiguriert.');
   }
 
   const role = image.id === recipe.previewImageId ? 'preview' : 'recipe';
@@ -123,19 +123,19 @@ function createFirestoreRecipeDocument(
 
 export async function uploadSingleRecipeToFirebase(recipeId: string): Promise<UploadRecipeResult> {
   if (!firestore || !firebaseStorage || !firebaseAuth) {
-    throw new Error('Firebase is not configured. Add your Vite Firebase env vars first.');
+    throw new Error('Firebase ist nicht konfiguriert. Füge zuerst deine Vite-Firebase-Umgebungsvariablen hinzu.');
   }
 
   const currentUser = firebaseAuth.currentUser;
 
   if (!currentUser) {
-    throw new Error('Sign in with Google before uploading this recipe.');
+    throw new Error('Melde dich mit Google an, bevor du dieses Rezept hochlädst.');
   }
 
   const recipe = await getRecipe(recipeId);
 
   if (!recipe) {
-    throw new Error('Recipe could not be found locally.');
+    throw new Error('Rezept konnte lokal nicht gefunden werden.');
   }
 
   const imageEntries = await getReferencedLocalImages(recipe);

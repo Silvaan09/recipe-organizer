@@ -29,7 +29,7 @@ function ShelfImageCard({ imageId, index, onImageOpen, title, total }: ShelfImag
           <button
             type="button"
             className="block size-full cursor-zoom-in"
-            aria-label="Open image full screen"
+            aria-label="Bild im Vollbild öffnen"
             onClick={() => {
               if (index !== undefined && onImageOpen) {
                 onImageOpen(index);
@@ -57,7 +57,7 @@ function ShelfImageCard({ imageId, index, onImageOpen, title, total }: ShelfImag
                 )}
               </div>
               <p className="mt-4 text-sm font-bold text-cocoa-700">
-                {imageId ? 'Recipe image could not be loaded' : 'No recipe images selected'}
+                {imageId ? 'Rezeptbild konnte nicht geladen werden' : 'Keine Rezeptbilder ausgewählt'}
               </p>
             </div>
           </div>
@@ -66,7 +66,7 @@ function ShelfImageCard({ imageId, index, onImageOpen, title, total }: ShelfImag
 
       {index !== undefined ? (
         <div className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-bold text-petal-700 shadow-soft">
-          {index + 1} of {Math.max(total ?? 1, 1)}
+          {index + 1} von {Math.max(total ?? 1, 1)}
         </div>
       ) : null}
     </div>
@@ -101,7 +101,7 @@ export function RecipeImageShelf({ imageIds, onImageOpen, title }: RecipeImageSh
             <button
               type="button"
               className="absolute left-3 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-petal-700 shadow-soft transition hover:bg-petal-50 disabled:opacity-35"
-              aria-label="Previous recipe image"
+              aria-label="Vorheriges Rezeptbild"
               disabled={!canGoPrevious}
               onClick={() => setActiveIndex((currentIndex) => Math.max(0, currentIndex - 1))}
             >
@@ -110,7 +110,7 @@ export function RecipeImageShelf({ imageIds, onImageOpen, title }: RecipeImageSh
             <button
               type="button"
               className="absolute right-3 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-petal-700 shadow-soft transition hover:bg-petal-50 disabled:opacity-35"
-              aria-label="Next recipe image"
+              aria-label="Nächstes Rezeptbild"
               disabled={!canGoNext}
               onClick={() =>
                 setActiveIndex((currentIndex) => Math.min(imageIds.length - 1, currentIndex + 1))
@@ -132,7 +132,7 @@ export function RecipeImageShelf({ imageIds, onImageOpen, title }: RecipeImageSh
                 'size-2.5 rounded-full transition',
                 activeIndex === index ? 'bg-petal-500' : 'bg-petal-200',
               )}
-              aria-label={`Show recipe image ${index + 1}`}
+              aria-label={`Rezeptbild ${index + 1} anzeigen`}
               onClick={() => setActiveIndex(index)}
             />
           ))}

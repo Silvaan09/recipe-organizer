@@ -10,3 +10,10 @@ export type {
   BulkUploadRecipeResult,
   BulkUploadSummary,
 } from './bulkUpload';
+export { downloadRecipesFromFirebase } from './downloadRecipes';
+export type {
+  DownloadSyncProgress,
+  DownloadSyncSummary,
+} from './downloadRecipes';
+export { deleteRecipeFromFirebase } from './deleteRecipe';
+export type { DeleteCloudRecipeResult } from './deleteRecipe';

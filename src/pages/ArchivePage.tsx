@@ -31,7 +31,7 @@ export function ArchivePage({ onClose, onOpenRecipe }: ArchivePageProps) {
         }
       } catch (loadError) {
         if (isMounted) {
-          setError(logAndReturnMessage(loadError, 'Archive could not be loaded.'));
+          setError(logAndReturnMessage(loadError, 'Archiv konnte nicht geladen werden.'));
         }
       } finally {
         if (isMounted) {
@@ -55,14 +55,14 @@ export function ArchivePage({ onClose, onOpenRecipe }: ArchivePageProps) {
         onClick={onClose}
       >
         <ArrowLeft aria-hidden="true" size={18} />
-        Settings
+        Einstellungen
       </button>
 
       <section className="rounded-lg bg-gradient-to-br from-petal-400 via-petal-300 to-herb-100 p-5 text-white shadow-soft">
-        <p className="text-sm font-semibold text-white/85">Stored locally</p>
-        <h2 className="mt-2 font-serif text-3xl font-bold leading-tight">Archive</h2>
+        <p className="text-sm font-semibold text-white/85">Lokal gespeichert</p>
+        <h2 className="mt-2 font-serif text-3xl font-bold leading-tight">Archiv</h2>
         <p className="mt-3 max-w-sm text-sm leading-6 text-white/85">
-          Restore recipes back to your library or permanently remove them from this device.
+          Stelle Rezepte wieder her oder entferne sie dauerhaft von diesem Gerät.
         </p>
       </section>
 
@@ -80,8 +80,8 @@ export function ArchivePage({ onClose, onOpenRecipe }: ArchivePageProps) {
         </div>
       ) : (
         <RecipeList
-          emptyLabel="Deleted recipes will appear here before they are permanently removed."
-          emptyTitle="Archive is empty"
+          emptyLabel="Gelöschte Rezepte erscheinen hier, bevor sie dauerhaft entfernt werden."
+          emptyTitle="Das Archiv ist leer"
           isLoading={false}
           recipes={recipes}
           onRecipeClick={(recipe) => onOpenRecipe(recipe.id)}

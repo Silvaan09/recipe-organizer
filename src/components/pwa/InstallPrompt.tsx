@@ -18,20 +18,20 @@ export function InstallPrompt() {
           <Download aria-hidden="true" size={19} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold text-cocoa-900">Install recipe book</p>
-          <p className="text-xs font-medium text-cocoa-700">Open faster and keep it handy offline.</p>
+          <p className="text-sm font-bold text-cocoa-900">Rezeptbuch installieren</p>
+          <p className="text-xs font-medium text-cocoa-700">Schneller öffnen und offline griffbereit halten.</p>
         </div>
         <button
           type="button"
           className="min-h-10 rounded-lg bg-petal-500 px-3 text-xs font-bold text-white"
           onClick={() => void promptInstall()}
         >
-          Install
+          Installieren
         </button>
         <button
           type="button"
           className="grid size-10 place-items-center rounded-lg text-petal-700 transition hover:bg-petal-50"
-          aria-label="Dismiss install prompt"
+          aria-label="Installationshinweis schließen"
           onClick={() => setIsDismissed(true)}
         >
           <X aria-hidden="true" size={18} />

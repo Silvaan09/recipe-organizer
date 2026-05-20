@@ -25,7 +25,7 @@ export function RecipeImageLightbox({
   const canGoNext = activeIndex < imageIds.length - 1;
   const hasMultipleImages = imageIds.length > 1;
   const imageLabel = useMemo(
-    () => `${activeIndex + 1} of ${Math.max(imageIds.length, 1)}`,
+    () => `${activeIndex + 1} von ${Math.max(imageIds.length, 1)}`,
     [activeIndex, imageIds.length],
   );
 
@@ -72,7 +72,7 @@ export function RecipeImageLightbox({
         <button
           type="button"
           className="grid size-11 shrink-0 place-items-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
-          aria-label="Close full screen image"
+          aria-label="Vollbild schließen"
           onClick={onClose}
         >
           <X aria-hidden="true" size={22} />
@@ -91,7 +91,7 @@ export function RecipeImageLightbox({
           <Skeleton className="h-3/4 w-full max-w-screen-sm rounded-lg bg-white/20" />
         ) : (
           <div className="rounded-lg border border-white/15 bg-white/10 p-6 text-center text-sm font-bold">
-            Image could not be loaded.
+            Bild konnte nicht geladen werden.
           </div>
         )}
 
@@ -100,7 +100,7 @@ export function RecipeImageLightbox({
             <button
               type="button"
               className="absolute left-3 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-white/15 text-white shadow-soft transition hover:bg-white/25 disabled:opacity-30"
-              aria-label="Previous image"
+              aria-label="Vorheriges Bild"
               disabled={!canGoPrevious}
               onClick={goToPrevious}
             >
@@ -109,7 +109,7 @@ export function RecipeImageLightbox({
             <button
               type="button"
               className="absolute right-3 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-white/15 text-white shadow-soft transition hover:bg-white/25 disabled:opacity-30"
-              aria-label="Next image"
+              aria-label="Nächstes Bild"
               disabled={!canGoNext}
               onClick={goToNext}
             >
@@ -129,7 +129,7 @@ export function RecipeImageLightbox({
                 'size-2.5 rounded-full transition',
                 activeIndex === index ? 'bg-white' : 'bg-white/35',
               )}
-              aria-label={`Show image ${index + 1}`}
+              aria-label={`Bild ${index + 1} anzeigen`}
               onClick={() => setActiveIndex(index)}
             />
           ))}

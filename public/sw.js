@@ -1,14 +1,16 @@
-const CACHE_NAME = 'recipe-organizer-v4';
+const CACHE_NAME = 'recipe-organizer-v5';
+const APP_START_URL = new URL('.', self.registration.scope).pathname;
+const withBase = (path) => new URL(path, self.registration.scope).pathname;
 const APP_SHELL = [
-  '/',
-  '/manifest.webmanifest',
-  '/recipe-icon.svg',
-  '/pwa/icon-any.svg',
-  '/pwa/icon-maskable.svg',
-  '/pwa/splash.svg',
-  '/recipe-images/mock-breakfast-cover.svg',
-  '/recipe-images/mock-chicken-cover.svg',
-  '/recipe-images/mock-pasta-cover.svg',
+  APP_START_URL,
+  withBase('manifest.webmanifest'),
+  withBase('recipe-icon.svg'),
+  withBase('pwa/icon-any.svg'),
+  withBase('pwa/icon-maskable.svg'),
+  withBase('pwa/splash.svg'),
+  withBase('recipe-images/mock-breakfast-cover.svg'),
+  withBase('recipe-images/mock-chicken-cover.svg'),
+  withBase('recipe-images/mock-pasta-cover.svg'),
 ];
 
 self.addEventListener('install', (event) => {
@@ -41,12 +43,12 @@ self.addEventListener('fetch', (event) => {
           const responseClone = response.clone();
 
           caches.open(CACHE_NAME).then((cache) => {
-            cache.put('/', responseClone);
+            cache.put(APP_START_URL, responseClone);
           });
 
           return response;
         })
-        .catch(() => caches.match('/')),
+        .catch(() => caches.match(APP_START_URL)),
     );
     return;
   }

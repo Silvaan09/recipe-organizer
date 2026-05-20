@@ -28,9 +28,9 @@ export function RecipesPage({ onAddRecipe, onOpenRecipe }: RecipesPageProps) {
       <section className="flex flex-col gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-petal-600">
-            Recipe library
+            Rezeptbibliothek
           </p>
-          <h2 className="mt-1 font-serif text-3xl font-bold">All recipes</h2>
+          <h2 className="mt-1 font-serif text-3xl font-bold">Alle Rezepte</h2>
         </div>
 
         <RecipeSortControl value={sortMode} onChange={setSortMode} />
@@ -43,8 +43,8 @@ export function RecipesPage({ onAddRecipe, onOpenRecipe }: RecipesPageProps) {
       ) : null}
 
       <RecipeList
-        emptyLabel="No recipes saved locally yet. Add one from Home and it will be stored on this device."
-        emptyTitle="Your shelf is waiting"
+        emptyLabel="Noch keine Rezepte lokal gespeichert. Füge eines auf der Startseite hinzu und es wird auf diesem Gerät gespeichert."
+        emptyTitle="Dein Regal wartet"
         isLoading={isLoading}
         recipes={visibleRecipes}
         onRecipeClick={handleRecipeClick}

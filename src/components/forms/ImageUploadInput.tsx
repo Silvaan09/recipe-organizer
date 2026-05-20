@@ -24,9 +24,9 @@ type ImageUploadInputProps = {
 };
 
 export function ImageUploadInput({
-  cameraLabel = 'Phone capture',
+  cameraLabel = 'Handyaufnahme',
   cropMode = 'recipe',
-  description = 'Multiple images are welcome',
+  description = 'Mehrere Bilder sind möglich',
   error,
   images,
   multiple = true,
@@ -35,8 +35,8 @@ export function ImageUploadInput({
   onMoveImage,
   onRemoveImage,
   previewAspectClass = 'aspect-square',
-  title = 'Images',
-  uploadLabel = 'Multiple photos',
+  title = 'Bilder',
+  uploadLabel = 'Mehrere Fotos',
 }: ImageUploadInputProps) {
   const [croppingImage, setCroppingImage] = useState<ImageDraft>();
 
@@ -49,7 +49,7 @@ export function ImageUploadInput({
       <div className="mt-2 grid grid-cols-2 gap-3">
         <label className="flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-petal-200 bg-white/80 px-4 text-center shadow-soft transition hover:border-petal-300 hover:bg-petal-50">
           <ImagePlus aria-hidden="true" size={25} className="text-petal-600" />
-          <span className="mt-2 text-sm font-bold text-cocoa-900">Upload</span>
+          <span className="mt-2 text-sm font-bold text-cocoa-900">Hochladen</span>
           <span className="mt-1 text-xs font-medium text-cocoa-700">{uploadLabel}</span>
           <input
             type="file"
@@ -67,7 +67,7 @@ export function ImageUploadInput({
 
         <label className="flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-petal-200 bg-white/80 px-4 text-center shadow-soft transition hover:border-petal-300 hover:bg-petal-50">
           <Camera aria-hidden="true" size={25} className="text-petal-600" />
-          <span className="mt-2 text-sm font-bold text-cocoa-900">Camera</span>
+          <span className="mt-2 text-sm font-bold text-cocoa-900">Kamera</span>
           <span className="mt-1 text-xs font-medium text-cocoa-700">{cameraLabel}</span>
           <input
             type="file"
@@ -104,12 +104,12 @@ export function ImageUploadInput({
                 />
                 {image.status === 'processing' ? (
                   <div className="absolute inset-0 grid place-items-center bg-white/70 text-xs font-bold text-petal-700 backdrop-blur-sm">
-                    Optimizing
+                    Optimieren
                   </div>
                 ) : null}
               </div>
               <div className="px-2 pt-2 text-xs font-semibold text-cocoa-700">
-                {image.optimizedSize ? `${Math.round(image.optimizedSize / 1024)}KB JPG` : 'Preparing'}
+                {image.optimizedSize ? `${Math.round(image.optimizedSize / 1024)}KB JPG` : 'Vorbereiten'}
               </div>
               {image.error ? (
                 <p className="px-2 pt-1 text-xs font-semibold text-petal-700">{image.error}</p>
@@ -118,7 +118,7 @@ export function ImageUploadInput({
                 <button
                   type="button"
                   className="grid min-h-9 place-items-center rounded-md text-petal-700 transition hover:bg-petal-50 disabled:opacity-35"
-                  aria-label="Move image left"
+                  aria-label="Bild nach links verschieben"
                   disabled={index === 0}
                   onClick={() => onMoveImage(image.tempId, 'left')}
                 >
@@ -127,7 +127,7 @@ export function ImageUploadInput({
                 <button
                   type="button"
                   className="grid min-h-9 place-items-center rounded-md text-petal-700 transition hover:bg-petal-50 disabled:opacity-35"
-                  aria-label="Crop image"
+                  aria-label="Bild zuschneiden"
                   disabled={!image.sourceFile || image.status === 'processing'}
                   onClick={() => setCroppingImage(image)}
                 >
@@ -136,7 +136,7 @@ export function ImageUploadInput({
                 <button
                   type="button"
                   className="grid min-h-9 place-items-center rounded-md text-petal-700 transition hover:bg-petal-50"
-                  aria-label="Remove image"
+                  aria-label="Bild entfernen"
                   onClick={() => onRemoveImage(image.tempId)}
                 >
                   <Trash2 aria-hidden="true" size={17} />
@@ -144,7 +144,7 @@ export function ImageUploadInput({
                 <button
                   type="button"
                   className="grid min-h-9 place-items-center rounded-md text-petal-700 transition hover:bg-petal-50 disabled:opacity-35"
-                  aria-label="Move image right"
+                  aria-label="Bild nach rechts verschieben"
                   disabled={index === images.length - 1}
                   onClick={() => onMoveImage(image.tempId, 'right')}
                 >

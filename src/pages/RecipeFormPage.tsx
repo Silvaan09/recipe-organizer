@@ -49,14 +49,14 @@ export function RecipeFormPage({ recipeId, onCancel, onSaved }: RecipeFormPagePr
         onClick={onCancel}
       >
         <ArrowLeft aria-hidden="true" size={18} />
-        Back
+        Zurück
       </button>
 
       {isLoading ? (
         <div className="h-96 animate-pulse rounded-lg border border-petal-100 bg-white/80 shadow-soft" />
       ) : recipeId && !recipe ? (
         <div className="rounded-lg border border-petal-100 bg-white p-5 text-sm font-semibold text-cocoa-700 shadow-soft">
-          Recipe could not be found locally.
+          Rezept konnte lokal nicht gefunden werden.
         </div>
       ) : (
         <RecipeForm initialRecipe={recipe} onCancel={onCancel} onSaved={onSaved} />

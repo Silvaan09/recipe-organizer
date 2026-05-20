@@ -36,7 +36,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       isLoading,
       signInWithGoogle: async () => {
         if (!firebaseAuth) {
-          throw new Error('Firebase is not configured yet. Add your Vite Firebase env vars first.');
+          throw new Error('Firebase ist noch nicht konfiguriert. Füge zuerst deine Vite-Firebase-Umgebungsvariablen hinzu.');
         }
 
         const provider = new GoogleAuthProvider();

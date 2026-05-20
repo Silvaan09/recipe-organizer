@@ -30,7 +30,7 @@ export function RecipeImageGallery({
   const canGoPrevious = activeIndex > 0;
   const canGoNext = activeIndex < imageIds.length - 1;
   const galleryLabel = useMemo(
-    () => `${activeIndex + 1} of ${Math.max(imageIds.length, 1)}`,
+    () => `${activeIndex + 1} von ${Math.max(imageIds.length, 1)}`,
     [activeIndex, imageIds.length],
   );
 
@@ -65,7 +65,7 @@ export function RecipeImageGallery({
       <div className="grid aspect-[4/3] place-items-center rounded-2xl border border-dashed border-petal-200 bg-white/80 text-petal-500 shadow-soft">
         <div className="text-center">
           <ImageIcon aria-hidden="true" size={36} className="mx-auto" />
-          <p className="mt-3 text-sm font-bold text-cocoa-700">No images yet</p>
+          <p className="mt-3 text-sm font-bold text-cocoa-700">Noch keine Bilder</p>
         </div>
       </div>
     );
@@ -83,7 +83,7 @@ export function RecipeImageGallery({
             <button
               type="button"
               className="block size-full cursor-zoom-in"
-              aria-label="Open image full screen"
+              aria-label="Bild im Vollbild öffnen"
               onClick={() => onImageOpen?.(activeIndex)}
             >
               <img
@@ -116,7 +116,7 @@ export function RecipeImageGallery({
             <button
               type="button"
               className="absolute left-3 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-petal-700 shadow-soft transition hover:bg-petal-50 disabled:opacity-35"
-              aria-label="Previous image"
+              aria-label="Vorheriges Bild"
               disabled={!canGoPrevious}
               onClick={goToPrevious}
             >
@@ -125,7 +125,7 @@ export function RecipeImageGallery({
             <button
               type="button"
               className="absolute right-3 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-petal-700 shadow-soft transition hover:bg-petal-50 disabled:opacity-35"
-              aria-label="Next image"
+              aria-label="Nächstes Bild"
               disabled={!canGoNext}
               onClick={goToNext}
             >
@@ -145,7 +145,7 @@ export function RecipeImageGallery({
                 'size-2.5 rounded-full transition',
                 activeIndex === index ? 'bg-petal-500' : 'bg-petal-200',
               )}
-              aria-label={`Show image ${index + 1}`}
+              aria-label={`Bild ${index + 1} anzeigen`}
               onClick={() => setActiveIndex(index)}
             />
           ))}

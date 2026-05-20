@@ -2,8 +2,8 @@
   "name": "Recipe Organizer",
   "short_name": "Recipes",
   "description": "A mobile-first recipe organizer for planning and saving meals.",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": ".",
+  "scope": ".",
   "display": "standalone",
   "background_color": "#fff7f8",
   "theme_color": "#fb7185",
@@ -11,19 +11,19 @@
   "categories": ["food", "lifestyle", "productivity"],
   "icons": [
     {
-      "src": "/recipe-icon.svg",
+      "src": "recipe-icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "/pwa/icon-any.svg",
+      "src": "pwa/icon-any.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "/pwa/icon-maskable.svg",
+      "src": "pwa/icon-maskable.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "maskable"
@@ -31,7 +31,7 @@
   ],
   "screenshots": [
     {
-      "src": "/pwa/splash.svg",
+      "src": "pwa/splash.svg",
       "sizes": "1080x1920",
       "type": "image/svg+xml",
       "form_factor": "narrow"

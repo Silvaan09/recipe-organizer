@@ -39,7 +39,7 @@ export async function replaceLocalDatabase(recipes: Recipe[], images: RecipeImag
     const validation = validateRecipe(recipe);
 
     if (!validation.ok) {
-      throw new Error(`Invalid recipe in restore data: ${validation.errors.join(' ')}`);
+      throw new Error(`Ungültiges Rezept in Wiederherstellungsdaten: ${validation.errors.join(' ')}`);
     }
 
     return validation.data;
@@ -48,7 +48,7 @@ export async function replaceLocalDatabase(recipes: Recipe[], images: RecipeImag
     const validation = validateRecipeImage(image);
 
     if (!validation.ok) {
-      throw new Error(`Invalid image in restore data: ${validation.errors.join(' ')}`);
+      throw new Error(`Ungültiges Bild in Wiederherstellungsdaten: ${validation.errors.join(' ')}`);
     }
 
     return validation.data;

@@ -17,6 +17,9 @@ import { clearLocalDatabase } from '../db';
 import { useAuth } from '../firebase';
 import { downloadBackupFile, restoreBackup, validateBackupFile } from '../services/backup';
 import {
+  downloadRecipesFromFirebase,
+  type DownloadSyncProgress,
+  type DownloadSyncSummary,
   uploadPendingRecipesToFirebase,
   type BulkUploadProgress,
   type BulkUploadSummary,
@@ -35,6 +38,40 @@ type SettingsStatus = {
   message: string;
 };
 
+function formatDownloadMessageStatus(status: DownloadSyncSummary['messages'][number]['status']) {
+  switch (status) {
+    case 'added':
+      return 'Hinzugefuegt';
+    case 'conflict':
+      return 'Konflikt';
+    case 'error':
+      return 'Fehler';
+    case 'skipped':
+      return 'Uebersprungen';
+    case 'updated':
+      return 'Aktualisiert';
+    default:
+      return status;
+  }
+}
+
+function formatSyncStatus(status: FirebaseSyncPlan['recipePlan'][number]['syncStatus']) {
+  switch (status) {
+    case 'local-only':
+      return 'nur lokal';
+    case 'pending-sync':
+      return 'ausstehend';
+    case 'synced':
+      return 'synchronisiert';
+    case 'sync-conflict':
+      return 'Konflikt';
+    case 'sync-error':
+      return 'Sync-Fehler';
+    default:
+      return status;
+  }
+}
+
 export function SettingsPage({ onClose, onOpenArchive }: SettingsPageProps) {
   const {
     currentUser,
@@ -52,6 +89,9 @@ export function SettingsPage({ onClose, onOpenArchive }: SettingsPageProps) {
   const [bulkUploadProgress, setBulkUploadProgress] = useState<BulkUploadProgress>();
   const [bulkUploadSummary, setBulkUploadSummary] = useState<BulkUploadSummary>();
   const [isUploadingPendingChanges, setIsUploadingPendingChanges] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState<DownloadSyncProgress>();
+  const [downloadSummary, setDownloadSummary] = useState<DownloadSyncSummary>();
+  const [isDownloadingFromCloud, setIsDownloadingFromCloud] = useState(false);
 
   async function handleDryRunSync() {
     setIsPlanningSync(true);
@@ -62,12 +102,12 @@ export function SettingsPage({ onClose, onOpenArchive }: SettingsPageProps) {
       setSyncPlan(nextSyncPlan);
       setStatus({
         tone: 'success',
-        message: `Dry run complete. Planned ${nextSyncPlan.recipesPendingSync} recipes and ${nextSyncPlan.imagesPendingSync} images.`,
+        message: `Testlauf abgeschlossen. Geplant: ${nextSyncPlan.recipesPendingSync} Rezepte und ${nextSyncPlan.imagesPendingSync} Bilder.`,
       });
     } catch (error) {
       setStatus({
         tone: 'error',
-        message: logAndReturnMessage(error, 'Dry run sync failed.'),
+        message: logAndReturnMessage(error, 'Sync-Testlauf fehlgeschlagen.'),
       });
     } finally {
       setIsPlanningSync(false);
@@ -78,7 +118,7 @@ export function SettingsPage({ onClose, onOpenArchive }: SettingsPageProps) {
     if (!isFirebaseConfigured) {
       setStatus({
         tone: 'error',
-        message: 'Firebase is not configured. Add your Vite Firebase env vars first.',
+        message: 'Firebase ist nicht konfiguriert. Füge zuerst deine Vite-Firebase-Umgebungsvariablen hinzu.',
       });
       return;
     }
@@ -86,13 +126,13 @@ export function SettingsPage({ onClose, onOpenArchive }: SettingsPageProps) {
     if (!currentUser) {
       setStatus({
         tone: 'error',
-        message: 'Sign in with Google before uploading pending changes.',
+        message: 'Melde dich mit Google an, bevor du ausstehende Änderungen hochlädst.',
       });
       return;
     }
 
     const shouldUpload = window.confirm(
-      'Upload pending local recipe changes to Firebase?\n\nThis will write recipe documents to Firestore and upload local images to Firebase Storage. It will not download anything from Firebase.',
+      'Ausstehende lokale Rezeptänderungen zu Firebase hochladen?\n\nDabei werden Rezeptdokumente in Firestore geschrieben und lokale Bilder in Firebase Storage hochgeladen. Es wird nichts von Firebase heruntergeladen.',
     );
 
     if (!shouldUpload) {
@@ -113,16 +153,65 @@ export function SettingsPage({ onClose, onOpenArchive }: SettingsPageProps) {
         tone: summary.failedUploads > 0 ? 'error' : 'success',
         message:
           summary.totalPendingRecipes === 0
-            ? 'No pending recipe changes to upload.'
-            : `Upload complete. ${summary.successfulUploads} succeeded and ${summary.failedUploads} failed.`,
+            ? 'Keine ausstehenden Rezeptänderungen zum Hochladen.'
+            : `Upload abgeschlossen. ${summary.successfulUploads} erfolgreich, ${summary.failedUploads} fehlgeschlagen.`,
       });
     } catch (error) {
       setStatus({
         tone: 'error',
-        message: logAndReturnMessage(error, 'Pending changes could not be uploaded.'),
+        message: logAndReturnMessage(error, 'Ausstehende Änderungen konnten nicht hochgeladen werden.'),
       });
     } finally {
       setIsUploadingPendingChanges(false);
+    }
+  }
+
+  async function handleDownloadFromCloud() {
+    if (!isFirebaseConfigured) {
+      setStatus({
+        tone: 'error',
+        message: 'Firebase ist nicht konfiguriert. Füge zuerst deine Vite-Firebase-Umgebungsvariablen hinzu.',
+      });
+      return;
+    }
+
+    if (!currentUser) {
+      setStatus({
+        tone: 'error',
+        message: 'Melde dich mit Google an, bevor du aus der Cloud herunterlädst.',
+      });
+      return;
+    }
+
+    const shouldDownload = window.confirm(
+      'Rezepte von Firebase auf dieses Gerät herunterladen?\n\nSynchronisierte lokale Rezepte können aktualisiert werden, wenn die Cloud-Version neuer ist. Rezepte mit nicht synchronisierten lokalen Änderungen werden nicht überschrieben und als Konflikt markiert.',
+    );
+
+    if (!shouldDownload) {
+      return;
+    }
+
+    setIsDownloadingFromCloud(true);
+    setDownloadProgress(undefined);
+    setDownloadSummary(undefined);
+    setStatus(undefined);
+
+    try {
+      const summary = await downloadRecipesFromFirebase(setDownloadProgress);
+      const nextSyncPlan = await createFirebaseSyncPlan();
+      setDownloadSummary(summary);
+      setSyncPlan(nextSyncPlan);
+      setStatus({
+        tone: summary.errors > 0 || summary.conflicts > 0 ? 'error' : 'success',
+        message: `Download abgeschlossen. ${summary.recipesAdded} hinzugefügt, ${summary.recipesUpdated} aktualisiert, ${summary.conflicts} Konflikte.`,
+      });
+    } catch (error) {
+      setStatus({
+        tone: 'error',
+        message: logAndReturnMessage(error, 'Cloud-Download fehlgeschlagen.'),
+      });
+    } finally {
+      setIsDownloadingFromCloud(false);
     }
   }
 
@@ -132,11 +221,11 @@ export function SettingsPage({ onClose, onOpenArchive }: SettingsPageProps) {
 
     try {
       await signInWithGoogle();
-      setStatus({ tone: 'success', message: 'Signed in with Google.' });
+      setStatus({ tone: 'success', message: 'Mit Google angemeldet.' });
     } catch (error) {
       setStatus({
         tone: 'error',
-        message: logAndReturnMessage(error, 'Google sign-in failed.'),
+        message: logAndReturnMessage(error, 'Google-Anmeldung fehlgeschlagen.'),
       });
     } finally {
       setIsAuthBusy(false);
@@ -149,11 +238,11 @@ export function SettingsPage({ onClose, onOpenArchive }: SettingsPageProps) {
 
     try {
       await signOut();
-      setStatus({ tone: 'success', message: 'Signed out. Local recipes remain available.' });
+      setStatus({ tone: 'success', message: 'Abgemeldet. Lokale Rezepte bleiben verfügbar.' });
     } catch (error) {
       setStatus({
         tone: 'error',
-        message: logAndReturnMessage(error, 'Sign out failed.'),
+        message: logAndReturnMessage(error, 'Abmelden fehlgeschlagen.'),
       });
     } finally {
       setIsAuthBusy(false);
@@ -168,12 +257,12 @@ export function SettingsPage({ onClose, onOpenArchive }: SettingsPageProps) {
       const result = await downloadBackupFile();
       setStatus({
         tone: 'success',
-        message: `Exported ${result.recipeCount} recipes and ${result.imageCount} images.`,
+        message: `${result.recipeCount} Rezepte und ${result.imageCount} Bilder exportiert.`,
       });
     } catch (error) {
       setStatus({
         tone: 'error',
-        message: logAndReturnMessage(error, 'Backup export failed.'),
+        message: logAndReturnMessage(error, 'Backup-Export fehlgeschlagen.'),
       });
     } finally {
       setIsBusy(false);
@@ -187,23 +276,23 @@ export function SettingsPage({ onClose, onOpenArchive }: SettingsPageProps) {
     try {
       const validatedBackup = await validateBackupFile(file);
       const shouldRestore = window.confirm(
-        `Restore backup from ${new Date(validatedBackup.exportedAt).toLocaleString()}?\n\nThis will replace your local recipes with ${validatedBackup.recipeCount} recipes and ${validatedBackup.imageCount} images.`,
+        `Backup vom ${new Date(validatedBackup.exportedAt).toLocaleString()} wiederherstellen?\n\nDadurch werden deine lokalen Rezepte durch ${validatedBackup.recipeCount} Rezepte und ${validatedBackup.imageCount} Bilder ersetzt.`,
       );
 
       if (!shouldRestore) {
-        setStatus({ tone: 'success', message: 'Import cancelled. Your local data was not changed.' });
+        setStatus({ tone: 'success', message: 'Import abgebrochen. Deine lokalen Daten wurden nicht geändert.' });
         return;
       }
 
       await restoreBackup(validatedBackup);
       setStatus({
         tone: 'success',
-        message: `Restored ${validatedBackup.recipeCount} recipes and ${validatedBackup.imageCount} images.`,
+        message: `${validatedBackup.recipeCount} Rezepte und ${validatedBackup.imageCount} Bilder wiederhergestellt.`,
       });
     } catch (error) {
       setStatus({
         tone: 'error',
-        message: logAndReturnMessage(error, 'Backup import failed.'),
+        message: logAndReturnMessage(error, 'Backup-Import fehlgeschlagen.'),
       });
     } finally {
       setIsBusy(false);
@@ -215,7 +304,7 @@ export function SettingsPage({ onClose, onOpenArchive }: SettingsPageProps) {
 
   async function handleClearDatabase() {
     const shouldClear = window.confirm(
-      'Clear all local recipes and images from this device? This cannot be undone unless you have a backup file.',
+      'Alle lokalen Rezepte und Bilder von diesem Gerät löschen? Das kann nur mit einer Backup-Datei rückgängig gemacht werden.',
     );
 
     if (!shouldClear) {
@@ -227,11 +316,11 @@ export function SettingsPage({ onClose, onOpenArchive }: SettingsPageProps) {
 
     try {
       await clearLocalDatabase();
-      setStatus({ tone: 'success', message: 'Local recipe database cleared.' });
+      setStatus({ tone: 'success', message: 'Lokale Rezeptdatenbank gelöscht.' });
     } catch (error) {
       setStatus({
         tone: 'error',
-        message: logAndReturnMessage(error, 'Database could not be cleared.'),
+        message: logAndReturnMessage(error, 'Datenbank konnte nicht gelöscht werden.'),
       });
     } finally {
       setIsBusy(false);
@@ -246,14 +335,14 @@ export function SettingsPage({ onClose, onOpenArchive }: SettingsPageProps) {
         onClick={onClose}
       >
         <ArrowLeft aria-hidden="true" size={18} />
-        Back
+        Zurück
       </button>
 
       <section className="rounded-lg bg-gradient-to-br from-petal-400 via-petal-300 to-herb-100 p-5 text-white shadow-soft">
-        <p className="text-sm font-semibold text-white/85">Offline data</p>
-        <h2 className="mt-2 font-serif text-3xl font-bold leading-tight">Settings</h2>
+        <p className="text-sm font-semibold text-white/85">Offline-Daten</p>
+        <h2 className="mt-2 font-serif text-3xl font-bold leading-tight">Einstellungen</h2>
         <p className="mt-3 max-w-sm text-sm leading-6 text-white/85">
-          Export, restore, or clear the recipes saved on this device.
+          Exportiere, stelle wieder her oder lösche die auf diesem Gerät gespeicherten Rezepte.
         </p>
       </section>
 
@@ -275,25 +364,25 @@ export function SettingsPage({ onClose, onOpenArchive }: SettingsPageProps) {
             <Cloud aria-hidden="true" size={21} />
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-base font-bold">Account</h3>
+            <h3 className="text-base font-bold">Konto</h3>
             <p className="mt-1 text-sm leading-6 text-cocoa-700">
               {currentUser
-                ? `Signed in as ${currentUser.displayName ?? currentUser.email ?? 'Google user'}.`
+                ? `Angemeldet als ${currentUser.displayName ?? currentUser.email ?? 'Google-Nutzer'}.`
                 : isFirebaseConfigured
-                  ? 'Not signed in. Local recipes still work offline on this device.'
-                  : 'Firebase is not configured yet. Local recipes still work offline.'}
+                  ? 'Nicht angemeldet. Lokale Rezepte funktionieren auf diesem Gerät weiterhin offline.'
+                  : 'Firebase ist noch nicht konfiguriert. Lokale Rezepte funktionieren weiterhin offline.'}
             </p>
           </div>
         </div>
 
         <div className="rounded-lg bg-petal-50 px-3 py-2 text-sm font-bold text-petal-700">
           {isAuthLoading
-            ? 'Checking account'
+            ? 'Konto prüfen'
             : currentUser
-              ? 'Signed in'
+              ? 'Angemeldet'
               : isFirebaseConfigured
-                ? 'Signed out'
-                : 'Local-only mode'}
+                ? 'Abgemeldet'
+                : 'Nur-lokal-Modus'}
         </div>
 
         {currentUser ? (
@@ -304,7 +393,7 @@ export function SettingsPage({ onClose, onOpenArchive }: SettingsPageProps) {
             onClick={() => void handleSignOut()}
           >
             <LogOut aria-hidden="true" size={18} />
-            Sign Out
+            Abmelden
           </button>
         ) : (
           <button
@@ -314,7 +403,7 @@ export function SettingsPage({ onClose, onOpenArchive }: SettingsPageProps) {
             onClick={() => void handleSignInWithGoogle()}
           >
             <LogIn aria-hidden="true" size={18} />
-            Sign in with Google
+            Mit Google anmelden
           </button>
         )}
       </Card>
@@ -325,22 +414,22 @@ export function SettingsPage({ onClose, onOpenArchive }: SettingsPageProps) {
             <RefreshCw aria-hidden="true" size={21} />
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-base font-bold">Sync dry run</h3>
+            <h3 className="text-base font-bold">Sync-Testlauf</h3>
             <p className="mt-1 text-sm leading-6 text-cocoa-700">
-              Preview what would sync to Firebase. This only reads local IndexedDB data.
+              Vorschau, was mit Firebase synchronisiert würde. Es werden nur lokale IndexedDB-Daten gelesen.
             </p>
           </div>
         </div>
 
         <div className="rounded-lg border border-petal-100 bg-petal-50 p-3 text-sm font-semibold text-petal-700">
-          Firebase status:{' '}
+          Firebase-Status:{' '}
           {isAuthLoading
-            ? 'checking'
+            ? 'prüfen'
             : currentUser
-              ? `signed in as ${currentUser.email ?? currentUser.displayName ?? 'Google user'}`
+              ? `angemeldet als ${currentUser.email ?? currentUser.displayName ?? 'Google-Nutzer'}`
               : isFirebaseConfigured
-                ? 'configured, signed out'
-                : 'not configured'}
+                ? 'konfiguriert, abgemeldet'
+                : 'nicht konfiguriert'}
         </div>
 
         <button
@@ -350,14 +439,13 @@ export function SettingsPage({ onClose, onOpenArchive }: SettingsPageProps) {
           onClick={() => void handleDryRunSync()}
         >
           <RefreshCw aria-hidden="true" size={18} className={isPlanningSync ? 'animate-spin' : ''} />
-          Dry Run Sync
+          Sync-Testlauf
         </button>
 
         <div className="rounded-lg border border-petal-100 bg-white p-3">
-          <h4 className="text-sm font-bold text-cocoa-900">Manual upload</h4>
+          <h4 className="text-sm font-bold text-cocoa-900">Manueller Upload</h4>
           <p className="mt-1 text-sm leading-6 text-cocoa-700">
-            Uploads only local recipes that changed, failed before, or are marked deleted. This uses one-time
-            Firebase writes and does not download cloud data.
+            Lädt nur lokale Rezepte hoch, die geändert wurden, zuvor fehlgeschlagen sind oder als gelöscht markiert wurden. Nutzt einmalige Firebase-Schreibvorgänge und lädt keine Cloud-Daten herunter.
           </p>
           <button
             type="button"
@@ -375,14 +463,14 @@ export function SettingsPage({ onClose, onOpenArchive }: SettingsPageProps) {
               size={18}
               className={isUploadingPendingChanges ? 'animate-pulse' : ''}
             />
-            {isUploadingPendingChanges ? 'Uploading pending changes' : 'Upload pending changes'}
+            {isUploadingPendingChanges ? 'Ausstehende Änderungen hochladen' : 'Ausstehende Änderungen hochladen'}
           </button>
         </div>
 
         {bulkUploadProgress ? (
           <div className="rounded-lg border border-petal-100 bg-petal-50 p-3">
             <div className="flex items-center justify-between gap-3">
-              <h4 className="text-sm font-bold text-cocoa-900">Upload progress</h4>
+              <h4 className="text-sm font-bold text-cocoa-900">Upload-Fortschritt</h4>
               <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-petal-700">
                 {bulkUploadProgress.completedUploads} / {bulkUploadProgress.totalPendingRecipes}
               </span>
@@ -404,25 +492,25 @@ export function SettingsPage({ onClose, onOpenArchive }: SettingsPageProps) {
             </div>
             <p className="mt-3 text-sm font-semibold text-cocoa-700">
               {bulkUploadProgress.currentRecipeTitle
-                ? `Uploading ${bulkUploadProgress.currentRecipeTitle}`
+                ? `${bulkUploadProgress.currentRecipeTitle} wird hochgeladen`
                 : bulkUploadProgress.totalPendingRecipes === 0
-                  ? 'No pending recipe changes found.'
-                  : 'Preparing pending recipe uploads.'}
+                  ? 'Keine ausstehenden Rezeptänderungen gefunden.'
+                  : 'Ausstehende Rezept-Uploads werden vorbereitet.'}
             </p>
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <SyncSummaryTile label="Successful" value={bulkUploadProgress.successfulUploads} />
-              <SyncSummaryTile label="Failed" value={bulkUploadProgress.failedUploads} />
+              <SyncSummaryTile label="Erfolgreich" value={bulkUploadProgress.successfulUploads} />
+              <SyncSummaryTile label="Fehlgeschlagen" value={bulkUploadProgress.failedUploads} />
             </div>
           </div>
         ) : null}
 
         {bulkUploadSummary ? (
           <div className="rounded-lg border border-petal-100 bg-white p-3">
-            <h4 className="text-sm font-bold text-cocoa-900">Upload summary</h4>
+            <h4 className="text-sm font-bold text-cocoa-900">Upload-Zusammenfassung</h4>
             <div className="mt-3 grid grid-cols-3 gap-2">
-              <SyncSummaryTile label="Pending" value={bulkUploadSummary.totalPendingRecipes} />
-              <SyncSummaryTile label="Uploaded" value={bulkUploadSummary.successfulUploads} />
-              <SyncSummaryTile label="Failed" value={bulkUploadSummary.failedUploads} />
+              <SyncSummaryTile label="Ausstehend" value={bulkUploadSummary.totalPendingRecipes} />
+              <SyncSummaryTile label="Hochgeladen" value={bulkUploadSummary.successfulUploads} />
+              <SyncSummaryTile label="Fehlgeschlagen" value={bulkUploadSummary.failedUploads} />
             </div>
             {bulkUploadSummary.results.length > 0 ? (
               <div className="mt-3 flex max-h-52 flex-col gap-2 overflow-y-auto pr-1">
@@ -431,14 +519,132 @@ export function SettingsPage({ onClose, onOpenArchive }: SettingsPageProps) {
                     <p className="truncate text-sm font-bold text-cocoa-900">{result.title}</p>
                     <p className="mt-1 text-xs font-semibold text-petal-700">
                       {result.status === 'success'
-                        ? `Uploaded ${result.imageCount ?? 0} images`
+                        ? `${result.imageCount ?? 0} Bilder hochgeladen`
                         : result.errorMessage}
                     </p>
                   </div>
                 ))}
                 {bulkUploadSummary.results.length > 20 ? (
                   <p className="text-xs font-bold text-cocoa-700">
-                    {bulkUploadSummary.results.length - 20} more results completed.
+                    {bulkUploadSummary.results.length - 20} weitere Ergebnisse abgeschlossen.
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="rounded-lg border border-petal-100 bg-white p-3">
+          <h4 className="text-sm font-bold text-cocoa-900">Manueller Download</h4>
+          <p className="mt-1 text-sm leading-6 text-cocoa-700">
+            Liest deine Firebase-Rezeptdokumente einmalig und lädt nur fehlende lokale Bilder herunter. Nicht synchronisierte lokale Änderungen werden geschützt und als Konflikte markiert.
+          </p>
+          <button
+            type="button"
+            className="mt-3 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border border-petal-100 bg-white px-4 text-sm font-bold text-petal-700 shadow-soft transition hover:bg-petal-50 disabled:opacity-60"
+            disabled={
+              !isFirebaseConfigured ||
+              !currentUser ||
+              isAuthLoading ||
+              isDownloadingFromCloud
+            }
+            onClick={() => void handleDownloadFromCloud()}
+          >
+            <Download
+              aria-hidden="true"
+              size={18}
+              className={isDownloadingFromCloud ? 'animate-pulse' : ''}
+            />
+            {isDownloadingFromCloud ? 'Aus der Cloud herunterladen' : 'Aus der Cloud herunterladen'}
+          </button>
+        </div>
+
+        {downloadProgress ? (
+          <div className="rounded-lg border border-petal-100 bg-petal-50 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <h4 className="text-sm font-bold text-cocoa-900">Download-Fortschritt</h4>
+              <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-petal-700">
+                {downloadProgress.recipesProcessed} / {downloadProgress.cloudRecipesFound}
+              </span>
+            </div>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
+              <div
+                className="h-full rounded-full bg-petal-500 transition-all"
+                style={{
+                  width:
+                    downloadProgress.cloudRecipesFound === 0
+                      ? '100%'
+                      : `${Math.round(
+                          (downloadProgress.recipesProcessed /
+                            downloadProgress.cloudRecipesFound) *
+                            100,
+                        )}%`,
+                }}
+              />
+            </div>
+            <p className="mt-3 text-sm font-semibold text-cocoa-700">
+              {downloadProgress.currentRecipeTitle
+                ? `${downloadProgress.currentRecipeTitle} wird geprüft`
+                : downloadProgress.cloudRecipesFound === 0
+                  ? 'Keine Cloud-Rezepte gefunden.'
+                  : 'Cloud-Rezepte werden vorbereitet.'}
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <SyncSummaryTile label="Verarbeitet" value={downloadProgress.recipesProcessed} />
+              <SyncSummaryTile label="Hinzugefügt" value={downloadProgress.recipesAdded} />
+              <SyncSummaryTile label="Aktualisiert" value={downloadProgress.recipesUpdated} />
+              <SyncSummaryTile label="Übersprungen" value={downloadProgress.recipesSkipped} />
+              <SyncSummaryTile label="Konflikte" value={downloadProgress.conflicts} />
+              <SyncSummaryTile label="Bilder" value={downloadProgress.imagesDownloaded} />
+              <SyncSummaryTile label="Fehler" value={downloadProgress.errors} />
+            </div>
+          </div>
+        ) : null}
+
+        {downloadSummary ? (
+          <div className="rounded-lg border border-petal-100 bg-white p-3">
+            <h4 className="text-sm font-bold text-cocoa-900">Download-Zusammenfassung</h4>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <SyncSummaryTile label="Cloud-Rezepte" value={downloadSummary.cloudRecipesFound} />
+              <SyncSummaryTile label="Verarbeitet" value={downloadSummary.recipesProcessed} />
+              <SyncSummaryTile label="Hinzugefügt" value={downloadSummary.recipesAdded} />
+              <SyncSummaryTile label="Aktualisiert" value={downloadSummary.recipesUpdated} />
+              <SyncSummaryTile label="Übersprungen" value={downloadSummary.recipesSkipped} />
+              <SyncSummaryTile label="Konflikte" value={downloadSummary.conflicts} />
+              <SyncSummaryTile label="Bilder" value={downloadSummary.imagesDownloaded} />
+              <SyncSummaryTile label="Fehler" value={downloadSummary.errors} />
+            </div>
+            {downloadSummary.imageErrors.length > 0 ? (
+              <div className="mt-3 rounded-lg border border-petal-100 bg-petal-50 p-3">
+                <h5 className="text-sm font-bold text-cocoa-900">Bild-Download-Fehler</h5>
+                <p className="mt-1 text-xs font-semibold leading-5 text-cocoa-700">
+                  Wenn hier Abruf- oder CORS-Fehler stehen, konfiguriere CORS für den Firebase-Storage-Bucket.
+                </p>
+                <div className="mt-2 flex max-h-40 flex-col gap-2 overflow-y-auto pr-1">
+                  {downloadSummary.imageErrors.slice(0, 12).map((error) => (
+                    <div key={`${error.recipeId}-${error.imageId}`} className="rounded-lg bg-white px-3 py-2">
+                      <p className="truncate text-xs font-bold text-cocoa-900">{error.recipeTitle}</p>
+                      <p className="mt-1 break-words text-xs font-semibold text-petal-700">
+                        {error.imageId}: {error.message}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {downloadSummary.messages.length > 0 ? (
+              <div className="mt-3 flex max-h-52 flex-col gap-2 overflow-y-auto pr-1">
+                {downloadSummary.messages.slice(0, 20).map((item) => (
+                  <div key={`${item.status}-${item.id}`} className="rounded-lg bg-petal-50 px-3 py-2">
+                    <p className="truncate text-sm font-bold text-cocoa-900">{item.title}</p>
+                    <p className="mt-1 text-xs font-semibold text-petal-700">
+                      {formatDownloadMessageStatus(item.status)}: {item.message}
+                    </p>
+                  </div>
+                ))}
+                {downloadSummary.messages.length > 20 ? (
+                  <p className="text-xs font-bold text-cocoa-700">
+                    {downloadSummary.messages.length - 20} weitere Ergebnisse abgeschlossen.
                   </p>
                 ) : null}
               </div>
@@ -449,16 +655,17 @@ export function SettingsPage({ onClose, onOpenArchive }: SettingsPageProps) {
         {syncPlan ? (
           <div className="flex flex-col gap-4">
             <div className="grid grid-cols-2 gap-2">
-              <SyncSummaryTile label="Total recipes" value={syncPlan.totalRecipes} />
-              <SyncSummaryTile label="Total images" value={syncPlan.totalImages} />
-              <SyncSummaryTile label="Recipes pending" value={syncPlan.recipesPendingSync} />
-              <SyncSummaryTile label="Images pending" value={syncPlan.imagesPendingSync} />
-              <SyncSummaryTile label="Recipes deleted" value={syncPlan.recipesMarkedDeleted} />
-              <SyncSummaryTile label="Upload size" value={formatBytes(syncPlan.estimatedUploadSize)} />
+              <SyncSummaryTile label="Rezepte gesamt" value={syncPlan.totalRecipes} />
+              <SyncSummaryTile label="Bilder gesamt" value={syncPlan.totalImages} />
+              <SyncSummaryTile label="Rezepte ausstehend" value={syncPlan.recipesPendingSync} />
+              <SyncSummaryTile label="Bilder ausstehend" value={syncPlan.imagesPendingSync} />
+              <SyncSummaryTile label="Rezepte gelöscht" value={syncPlan.recipesMarkedDeleted} />
+              <SyncSummaryTile label="Konflikte" value={syncPlan.recipesInConflict} />
+              <SyncSummaryTile label="Upload-Größe" value={formatBytes(syncPlan.estimatedUploadSize)} />
             </div>
 
             <div className="rounded-lg border border-petal-100 bg-white p-3">
-              <h4 className="text-sm font-bold text-cocoa-900">Warnings</h4>
+              <h4 className="text-sm font-bold text-cocoa-900">Warnungen</h4>
               <div className="mt-2 flex flex-col gap-2">
                 {syncPlan.warnings.map((warning) => (
                   <p key={warning} className="rounded-lg bg-petal-50 px-3 py-2 text-xs font-bold text-petal-700">
@@ -469,14 +676,14 @@ export function SettingsPage({ onClose, onOpenArchive }: SettingsPageProps) {
             </div>
 
             <SyncPlanList
-              emptyLabel="No recipes need sync."
+              emptyLabel="Keine Rezepte müssen synchronisiert werden."
               items={syncPlan.recipePlan}
-              title="Recipe plan"
+              title="Rezeptplan"
             />
             <SyncPlanList
-              emptyLabel="No images need sync."
+              emptyLabel="Keine Bilder müssen synchronisiert werden."
               items={syncPlan.imagePlan}
-              title="Image plan"
+              title="Bildplan"
             />
           </div>
         ) : null}
@@ -488,9 +695,9 @@ export function SettingsPage({ onClose, onOpenArchive }: SettingsPageProps) {
             <Database aria-hidden="true" size={21} />
           </div>
           <div>
-            <h3 className="text-base font-bold">Local backup</h3>
+            <h3 className="text-base font-bold">Lokales Backup</h3>
             <p className="mt-1 text-sm leading-6 text-cocoa-700">
-              Backups are JSON files that include recipe metadata and image data.
+              Backups sind JSON-Dateien mit Rezeptdaten und Bilddaten.
             </p>
           </div>
         </div>
@@ -502,7 +709,7 @@ export function SettingsPage({ onClose, onOpenArchive }: SettingsPageProps) {
           onClick={() => void handleExportBackup()}
         >
           <Download aria-hidden="true" size={18} />
-          Export Backup
+          Backup exportieren
         </button>
 
         <button
@@ -512,7 +719,7 @@ export function SettingsPage({ onClose, onOpenArchive }: SettingsPageProps) {
           onClick={() => fileInputRef.current?.click()}
         >
           <Upload aria-hidden="true" size={18} />
-          Import Backup
+          Backup importieren
         </button>
 
         <input
@@ -536,9 +743,9 @@ export function SettingsPage({ onClose, onOpenArchive }: SettingsPageProps) {
             <Archive aria-hidden="true" size={21} />
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-base font-bold">Archive</h3>
+            <h3 className="text-base font-bold">Archiv</h3>
             <p className="mt-1 text-sm leading-6 text-cocoa-700">
-              Restore deleted recipes or permanently remove them from this device.
+              Stelle gelöschte Rezepte wieder her oder entferne sie dauerhaft von diesem Gerät.
             </p>
           </div>
         </div>
@@ -548,14 +755,14 @@ export function SettingsPage({ onClose, onOpenArchive }: SettingsPageProps) {
           onClick={onOpenArchive}
         >
           <Archive aria-hidden="true" size={18} />
-          Open Archive
+          Archiv öffnen
         </button>
       </Card>
 
       <Card className="border-petal-200 bg-petal-50">
-        <h3 className="text-base font-bold">Clear local database</h3>
+        <h3 className="text-base font-bold">Lokale Datenbank löschen</h3>
         <p className="mt-1 text-sm leading-6 text-cocoa-700">
-          Removes all recipes and stored images from IndexedDB on this device.
+          Entfernt alle Rezepte und gespeicherten Bilder aus IndexedDB auf diesem Gerät.
         </p>
         <button
           type="button"
@@ -564,7 +771,7 @@ export function SettingsPage({ onClose, onOpenArchive }: SettingsPageProps) {
           onClick={() => void handleClearDatabase()}
         >
           <Trash2 aria-hidden="true" size={18} />
-          Clear Local Database
+          Lokale Datenbank löschen
         </button>
       </Card>
     </>
@@ -603,13 +810,13 @@ function SyncPlanList({ emptyLabel, items, title }: SyncPlanListProps) {
             <div key={item.id} className="rounded-lg bg-petal-50 px-3 py-2">
               <p className="truncate text-sm font-bold text-cocoa-900">{item.title}</p>
               <p className="mt-1 text-xs font-semibold text-petal-700">
-                {item.reason} · {item.syncStatus}
+                {item.reason} - {formatSyncStatus(item.syncStatus)}
               </p>
             </div>
           ))}
           {items.length > 20 ? (
             <p className="text-xs font-bold text-cocoa-700">
-              {items.length - 20} more items included in the plan.
+              {items.length - 20} weitere Einträge sind im Plan enthalten.
             </p>
           ) : null}
         </div>

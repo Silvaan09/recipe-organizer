@@ -10,6 +10,7 @@ export {
   getRecipeImagesByRecipeId,
   markRecipeImagesSynced,
   markRecipeImagesSyncError,
+  putSyncedRecipeImage,
 } from './images';
 export {
   addRecipe,
@@ -20,7 +21,9 @@ export {
   getArchivedRecipes,
   getRecipe,
   markRecipeSynced,
+  markRecipeSyncConflict,
   markRecipeSyncError,
+  putSyncedRecipe,
   searchRecipes,
   restoreRecipe,
   updateLastUsed,

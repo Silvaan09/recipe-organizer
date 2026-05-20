@@ -209,3 +209,33 @@ export async function markRecipeImagesSyncError(
     );
   });
 }
+
+export async function putSyncedRecipeImage(
+  image: RecipeImage,
+  thumbnail?: RecipeImageThumbnail,
+): Promise<RecipeImage> {
+  const imageValidation = validateRecipeImage(image);
+
+  if (!imageValidation.ok) {
+    throw new Error(imageValidation.errors.join(' '));
+  }
+
+  if (thumbnail) {
+    const thumbnailValidation = validateRecipeImageThumbnail(thumbnail);
+
+    if (!thumbnailValidation.ok) {
+      throw new Error(thumbnailValidation.errors.join(' '));
+    }
+
+    await db.transaction('rw', db.recipeImages, db.recipeImageThumbnails, async () => {
+      await db.recipeImages.put(imageValidation.data);
+      await db.recipeImageThumbnails.put(thumbnailValidation.data);
+    });
+
+    return imageValidation.data;
+  }
+
+  await db.recipeImages.put(imageValidation.data);
+
+  return imageValidation.data;
+}

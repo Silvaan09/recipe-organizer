@@ -19,7 +19,7 @@ function loadImage(file: Blob): Promise<HTMLImageElement> {
 
     image.onerror = () => {
       URL.revokeObjectURL(objectUrl);
-      reject(new Error('Image could not be loaded.'));
+      reject(new Error('Bild konnte nicht geladen werden.'));
     };
 
     image.src = objectUrl;
@@ -31,7 +31,7 @@ function canvasToJpgFile(canvas: HTMLCanvasElement, fileName: string): Promise<F
     canvas.toBlob(
       (blob) => {
         if (!blob) {
-          reject(new Error('Image could not be converted to JPG.'));
+          reject(new Error('Bild konnte nicht in JPG umgewandelt werden.'));
           return;
         }
 
@@ -58,7 +58,7 @@ function createRotatedSource(image: HTMLImageElement, rotation: number) {
   const isSideways = normalizedRotation === 90 || normalizedRotation === 270;
 
   if (!context) {
-    throw new Error('Image rotation is not supported in this browser.');
+    throw new Error('Bilddrehung wird in diesem Browser nicht unterstützt.');
   }
 
   canvas.width = isSideways ? image.naturalHeight : image.naturalWidth;
@@ -105,7 +105,7 @@ async function createThumbnailFile(file: Blob, fileName: string): Promise<File> 
   const context = canvas.getContext('2d', { alpha: false });
 
   if (!context) {
-    throw new Error('Image thumbnail generation is not supported in this browser.');
+    throw new Error('Thumbnail-Erstellung wird in diesem Browser nicht unterstützt.');
   }
 
   canvas.width = THUMBNAIL_SIZE;
@@ -161,7 +161,7 @@ export async function processRecipeImage(
   const context = canvas.getContext('2d', { alpha: false });
 
   if (!context) {
-    throw new Error('Image processing is not supported in this browser.');
+    throw new Error('Bildverarbeitung wird in diesem Browser nicht unterstützt.');
   }
 
   canvas.width = outputWidth;

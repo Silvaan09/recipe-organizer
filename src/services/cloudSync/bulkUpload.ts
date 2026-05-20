@@ -32,7 +32,7 @@ export type BulkUploadSummary = {
 export type BulkUploadProgressHandler = (progress: BulkUploadProgress) => void;
 
 function getReadableError(error: unknown) {
-  return error instanceof Error ? error.message : 'Recipe upload failed.';
+  return error instanceof Error ? error.message : 'Rezept-Upload fehlgeschlagen.';
 }
 
 function getTimestampValue(timestamp?: string) {
@@ -79,11 +79,11 @@ export async function uploadPendingRecipesToFirebase(
   onProgress?: BulkUploadProgressHandler,
 ): Promise<BulkUploadSummary> {
   if (!firestore || !firebaseStorage || !firebaseAuth) {
-    throw new Error('Firebase is not configured. Add your Vite Firebase env vars first.');
+    throw new Error('Firebase ist nicht konfiguriert. Füge zuerst deine Vite-Firebase-Umgebungsvariablen hinzu.');
   }
 
   if (!firebaseAuth.currentUser) {
-    throw new Error('Sign in with Google before uploading pending changes.');
+    throw new Error('Melde dich mit Google an, bevor du ausstehende Änderungen hochlädst.');
   }
 
   const startedAt = new Date().toISOString();

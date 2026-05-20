@@ -1,9 +1,18 @@
-import { ArrowLeft, Pencil, RotateCcw, Trash2, UploadCloud } from 'lucide-react';
+import {
+  AlertTriangle,
+  ArrowLeft,
+  CheckCircle2,
+  CloudOff,
+  Pencil,
+  RefreshCw,
+  RotateCcw,
+  Trash2,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { archiveRecipe, deleteRecipe, getRecipe, restoreRecipe, updateLastUsed } from '../db';
 import { useAuth } from '../firebase';
-import { uploadSingleRecipeToFirebase } from '../services/cloudSync';
+import { deleteRecipeFromFirebase } from '../services/cloudSync';
 import { RecipeImageGallery } from '../components/recipes/RecipeImageGallery';
 import { RecipeImageLightbox } from '../components/recipes/RecipeImageLightbox';
 import { RecipeImageShelf } from '../components/recipes/RecipeImageShelf';
@@ -29,13 +38,11 @@ export function RecipeDetailPage({
   onRestored,
   recipeId,
 }: RecipeDetailPageProps) {
-  const { currentUser, isFirebaseConfigured, isLoading: isAuthLoading } = useAuth();
+  const { currentUser, isFirebaseConfigured } = useAuth();
   const [recipe, setRecipe] = useState<Recipe>();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<{ imageIds: string[]; initialIndex: number }>();
-  const [uploadStatus, setUploadStatus] = useState<{ tone: 'success' | 'error'; message: string }>();
-  const [isUploadingRecipe, setIsUploadingRecipe] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -46,7 +53,7 @@ export function RecipeDetailPage({
         const nextRecipe = await getRecipe(recipeId);
 
         if (!nextRecipe) {
-          throw new Error('Recipe could not be found locally.');
+          throw new Error('Rezept konnte lokal nicht gefunden werden.');
         }
 
         let lastUsedAt = nextRecipe.lastUsedAt;
@@ -65,7 +72,7 @@ export function RecipeDetailPage({
         }
       } catch (loadError) {
         if (isMounted) {
-          setError(logAndReturnMessage(loadError, 'Recipe could not be loaded.', { recipeId }));
+          setError(logAndReturnMessage(loadError, 'Rezept konnte nicht geladen werden.', { recipeId }));
         }
       } finally {
         if (isMounted) {
@@ -87,7 +94,7 @@ export function RecipeDetailPage({
     }
 
     const shouldDelete = window.confirm(
-      `Move "${recipe.title}" to the archive? You can restore it from Settings.`,
+      `"${recipe.title}" ins Archiv verschieben? Du kannst es in den Einstellungen wiederherstellen.`,
     );
 
     if (!shouldDelete) {
@@ -98,7 +105,7 @@ export function RecipeDetailPage({
       await archiveRecipe(recipe.id);
       onDeleted();
     } catch (deleteError) {
-      setError(logAndReturnMessage(deleteError, 'Recipe could not be archived.', { recipeId: recipe.id }));
+      setError(logAndReturnMessage(deleteError, 'Rezept konnte nicht archiviert werden.', { recipeId: recipe.id }));
     }
   }
 
@@ -111,7 +118,7 @@ export function RecipeDetailPage({
       await restoreRecipe(recipe.id);
       onRestored?.();
     } catch (restoreError) {
-      setError(logAndReturnMessage(restoreError, 'Recipe could not be restored.', { recipeId: recipe.id }));
+      setError(logAndReturnMessage(restoreError, 'Rezept konnte nicht wiederhergestellt werden.', { recipeId: recipe.id }));
     }
   }
 
@@ -121,7 +128,7 @@ export function RecipeDetailPage({
     }
 
     const shouldDelete = window.confirm(
-      `Permanently delete "${recipe.title}" and its saved images? This cannot be undone.`,
+      `"${recipe.title}" und gespeicherte Bilder dauerhaft löschen? Das kann nicht rückgängig gemacht werden.`,
     );
 
     if (!shouldDelete) {
@@ -129,48 +136,22 @@ export function RecipeDetailPage({
     }
 
     try {
+      if (isFirebaseConfigured && currentUser) {
+        const shouldDeleteFromCloud = window.confirm(
+          `"${recipe.title}" auch aus Firebase Firestore und Firebase Storage löschen? Dadurch werden das Cloud-Rezept und die hochgeladenen Bilder entfernt.`,
+        );
+
+        if (shouldDeleteFromCloud) {
+          await deleteRecipeFromFirebase(recipe.id);
+        }
+      }
+
       await deleteRecipe(recipe.id);
       onDeleted();
     } catch (deleteError) {
-      setError(logAndReturnMessage(deleteError, 'Recipe could not be permanently deleted.', {
+      setError(logAndReturnMessage(deleteError, 'Rezept konnte nicht dauerhaft gelöscht werden.', {
         recipeId: recipe.id,
       }));
-    }
-  }
-
-  async function handleUploadRecipe() {
-    if (!recipe) {
-      return;
-    }
-
-    setIsUploadingRecipe(true);
-    setUploadStatus(undefined);
-
-    try {
-      const result = await uploadSingleRecipeToFirebase(recipe.id);
-      const syncedRecipe = await getRecipe(recipe.id);
-
-      if (syncedRecipe) {
-        setRecipe(syncedRecipe);
-      }
-
-      setUploadStatus({
-        tone: 'success',
-        message: `Uploaded recipe metadata and ${result.imageCount} local images.`,
-      });
-    } catch (uploadError) {
-      const syncedRecipe = await getRecipe(recipe.id);
-
-      if (syncedRecipe) {
-        setRecipe(syncedRecipe);
-      }
-
-      setUploadStatus({
-        tone: 'error',
-        message: logAndReturnMessage(uploadError, 'Recipe upload failed.'),
-      });
-    } finally {
-      setIsUploadingRecipe(false);
     }
   }
 
@@ -197,7 +178,7 @@ export function RecipeDetailPage({
           onClick={onBack}
         >
           <ArrowLeft aria-hidden="true" size={18} />
-          Back
+          Zurück
         </button>
         <Card>
           <p className="text-sm font-semibold text-petal-700">{error}</p>
@@ -208,21 +189,24 @@ export function RecipeDetailPage({
 
   return (
     <>
-      <button
-        type="button"
-        className="inline-flex min-h-11 w-fit items-center gap-2 rounded-lg bg-white px-3 text-sm font-bold text-petal-700 shadow-soft transition hover:bg-petal-50"
-        onClick={onBack}
-      >
-        <ArrowLeft aria-hidden="true" size={18} />
-        Back
-      </button>
+      <div className="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          className="inline-flex min-h-11 w-fit items-center gap-2 rounded-lg bg-white px-3 text-sm font-bold text-petal-700 shadow-soft transition hover:bg-petal-50"
+          onClick={onBack}
+        >
+          <ArrowLeft aria-hidden="true" size={18} />
+          Zurück
+        </button>
+        <RecipeSyncIndicator recipe={recipe} />
+      </div>
 
       <section className="flex flex-col gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-petal-600">
-            Display image
+            Anzeigebild
           </p>
-          <h2 className="mt-1 text-lg font-bold text-cocoa-900">Recipe cover</h2>
+          <h2 className="mt-1 text-lg font-bold text-cocoa-900">Rezeptcover</h2>
         </div>
         <RecipeImageGallery
           imageIds={recipe.previewImageId ? [recipe.previewImageId] : []}
@@ -238,7 +222,7 @@ export function RecipeDetailPage({
       </section>
 
       <section className="rounded-lg bg-white p-5 shadow-soft">
-        <p className="text-xs font-semibold uppercase tracking-wide text-petal-600">Recipe card</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-petal-600">Rezeptkarte</p>
         <h2 className="mt-2 font-serif text-4xl font-bold leading-tight text-cocoa-900">
           {recipe.title}
         </h2>
@@ -255,78 +239,18 @@ export function RecipeDetailPage({
             ))
           ) : (
             <span className="rounded-full bg-petal-50 px-3 py-1.5 text-xs font-bold text-cocoa-700">
-              no keywords
+              keine Stichwörter
             </span>
           )}
         </div>
       </section>
 
-      {!isArchived ? (
-        <section className="rounded-lg border border-petal-100 bg-white p-4 shadow-soft">
-          <div className="flex items-start gap-3">
-            <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-petal-100 text-petal-700">
-              <UploadCloud aria-hidden="true" size={20} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="text-base font-bold text-cocoa-900">Firebase upload</h3>
-              <p className="mt-1 text-sm leading-6 text-cocoa-700">
-                Upload only this recipe and its local images. No bulk sync or downloads are run.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-3 rounded-lg bg-petal-50 px-3 py-2 text-sm font-bold text-petal-700">
-            {isAuthLoading
-              ? 'Checking account'
-              : currentUser
-                ? `Signed in as ${currentUser.email ?? currentUser.displayName ?? 'Google user'}`
-                : isFirebaseConfigured
-                  ? 'Sign in from Settings before uploading'
-                  : 'Firebase is not configured'}
-          </div>
-
-          {recipe.syncStatus === 'synced' && recipe.lastSyncedAt ? (
-            <p className="mt-3 text-xs font-bold text-herb-700">
-              Last uploaded {new Date(recipe.lastSyncedAt).toLocaleString()}.
-            </p>
-          ) : null}
-
-          {recipe.syncStatus === 'sync-error' && recipe.syncError ? (
-            <p className="mt-3 rounded-lg bg-petal-50 px-3 py-2 text-xs font-bold text-petal-700">
-              {recipe.syncError}
-            </p>
-          ) : null}
-
-          {uploadStatus ? (
-            <p
-              className={
-                uploadStatus.tone === 'success'
-                  ? 'mt-3 rounded-lg bg-herb-50 px-3 py-2 text-xs font-bold text-herb-700'
-                  : 'mt-3 rounded-lg bg-petal-50 px-3 py-2 text-xs font-bold text-petal-700'
-              }
-            >
-              {uploadStatus.message}
-            </p>
-          ) : null}
-
-          <button
-            type="button"
-            className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-petal-500 px-4 text-sm font-bold text-white shadow-lg shadow-petal-300/40 transition hover:bg-petal-600 disabled:opacity-60"
-            disabled={!isFirebaseConfigured || !currentUser || isAuthLoading || isUploadingRecipe}
-            onClick={() => void handleUploadRecipe()}
-          >
-            <UploadCloud aria-hidden="true" size={18} />
-            {isUploadingRecipe ? 'Uploading' : 'Upload this recipe'}
-          </button>
-        </section>
-      ) : null}
-
       <section className="flex flex-col gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-petal-600">
-            Recipe images
+            Rezeptbilder
           </p>
-          <h2 className="mt-1 text-lg font-bold text-cocoa-900">Gallery</h2>
+          <h2 className="mt-1 text-lg font-bold text-cocoa-900">Galerie</h2>
         </div>
         <RecipeImageShelf
           imageIds={recipe.imageIds}
@@ -343,7 +267,7 @@ export function RecipeDetailPage({
             onClick={() => void handleRestoreRecipe()}
           >
             <RotateCcw aria-hidden="true" size={18} />
-            Restore
+            Wiederherstellen
           </button>
           <button
             type="button"
@@ -351,7 +275,7 @@ export function RecipeDetailPage({
             onClick={() => void handlePermanentDeleteRecipe()}
           >
             <Trash2 aria-hidden="true" size={18} />
-            Delete
+            Löschen
           </button>
         </div>
       ) : (
@@ -362,7 +286,7 @@ export function RecipeDetailPage({
             onClick={() => onEdit(recipe.id)}
           >
             <Pencil aria-hidden="true" size={18} />
-            Edit
+            Bearbeiten
           </button>
           <button
             type="button"
@@ -370,7 +294,7 @@ export function RecipeDetailPage({
             onClick={() => void handleDeleteRecipe()}
           >
             <Trash2 aria-hidden="true" size={18} />
-            Delete
+            Löschen
           </button>
         </div>
       )}
@@ -384,5 +308,60 @@ export function RecipeDetailPage({
         />
       ) : null}
     </>
+  );
+}
+
+type RecipeSyncIndicatorProps = {
+  recipe: Recipe;
+};
+
+function RecipeSyncIndicator({ recipe }: RecipeSyncIndicatorProps) {
+  if (recipe.syncStatus === 'synced') {
+    return (
+      <span
+        className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-herb-100 bg-white px-3 text-sm font-bold text-herb-700 shadow-soft"
+        title="Mit der Cloud synchronisiert"
+      >
+        <CheckCircle2 aria-hidden="true" size={18} />
+        Synchronisiert
+      </span>
+    );
+  }
+
+  if (recipe.syncStatus === 'sync-error' || recipe.syncStatus === 'sync-conflict') {
+    const label =
+      recipe.syncStatus === 'sync-conflict' ? 'Sync-Konflikt' : 'Sync fehlgeschlagen';
+
+    return (
+      <span
+        className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-petal-200 bg-white px-3 text-sm font-bold text-petal-700 shadow-soft"
+        title={recipe.syncError ?? label}
+      >
+        <AlertTriangle aria-hidden="true" size={18} />
+        {label}
+      </span>
+    );
+  }
+
+  if (recipe.syncStatus === 'pending-sync') {
+    return (
+      <span
+        className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-petal-100 bg-white px-3 text-sm font-bold text-petal-700 shadow-soft"
+        title="Wartet auf Synchronisierung"
+      >
+        <RefreshCw aria-hidden="true" size={17} />
+        Ausstehend
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-petal-100 bg-white px-3 text-sm font-bold text-cocoa-700 shadow-soft"
+      title="Nur lokal gespeichert"
+    >
+      <CloudOff aria-hidden="true" size={18} />
+      Lokal
+    </span>
   );
 }

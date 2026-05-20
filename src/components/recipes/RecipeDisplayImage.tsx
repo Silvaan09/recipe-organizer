@@ -19,9 +19,9 @@ export function RecipeDisplayImage({ imageId, imagePosition, title }: RecipeDisp
       <div className="flex items-end justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-petal-600">
-            Display image
+            Anzeigebild
           </p>
-          <h2 className="mt-1 text-lg font-bold text-cocoa-900">Recipe cover</h2>
+          <h2 className="mt-1 text-lg font-bold text-cocoa-900">Rezeptcover</h2>
         </div>
       </div>
 
@@ -50,7 +50,7 @@ export function RecipeDisplayImage({ imageId, imagePosition, title }: RecipeDisp
                   )}
                 </div>
                 <p className="mt-4 text-sm font-bold text-cocoa-700">
-                  {imageId ? 'Display image could not be loaded' : 'No display image selected'}
+                  {imageId ? 'Anzeigebild konnte nicht geladen werden' : 'Kein Anzeigebild ausgewählt'}
                 </p>
               </div>
             </div>
