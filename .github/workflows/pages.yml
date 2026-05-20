@@ -35,11 +35,11 @@ jobs:
         run: |
           REPO_NAME=${GITHUB_REPOSITORY##*/}
           if [[ "$REPO_NAME" == *.github.io ]]; then
-            export VITE_BASE_PATH=/
+            BASE_PATH=/
           else
-            export VITE_BASE_PATH=/$REPO_NAME/
+            BASE_PATH=/$REPO_NAME/
           fi
-          npm run build
+          npm run build -- --base="$BASE_PATH"
 
       - name: Create Pages fallback (if present)
         run: |
