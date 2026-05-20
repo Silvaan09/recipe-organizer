@@ -1,0 +1,12 @@
+<svg width="1080" height="1920" viewBox="0 0 1080 1920" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1080" height="1920" fill="#FFF7F8"/>
+  <circle cx="540" cy="740" r="250" fill="#FFE8EC"/>
+  <rect x="393" y="514" width="294" height="420" rx="62" fill="#FB7185"/>
+  <path d="M457 632H623" stroke="#FFF7F8" stroke-width="42" stroke-linecap="round"/>
+  <path d="M457 735H623" stroke="#FFF7F8" stroke-width="42" stroke-linecap="round"/>
+  <path d="M457 838H575" stroke="#FFF7F8" stroke-width="42" stroke-linecap="round"/>
+  <path d="M690 536C758 588 785 661 773 748" stroke="#41A66B" stroke-width="48" stroke-linecap="round"/>
+  <path d="M390 536C322 588 295 661 307 748" stroke="#41A66B" stroke-width="48" stroke-linecap="round"/>
+  <text x="540" y="1128" text-anchor="middle" font-family="Georgia, serif" font-size="84" font-weight="700" fill="#301C20">Recipe Organizer</text>
+  <text x="540" y="1200" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" font-weight="700" fill="#DB2D4B">Your cozy offline recipe book</text>
+</svg>
