@@ -11,27 +11,22 @@ permissions:
   pages: write
   id-token: write
 
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
-      - name: Cache npm
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+          cache: npm
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
@@ -40,10 +35,8 @@ jobs:
         run: |
           REPO_NAME=${GITHUB_REPOSITORY##*/}
           if [[ "$REPO_NAME" == *.github.io ]]; then
-            echo "User/Org Pages detected; setting VITE_BASE_PATH=/"
             export VITE_BASE_PATH=/
           else
-            echo "Project Pages detected; setting VITE_BASE_PATH=/$REPO_NAME/"
             export VITE_BASE_PATH=/$REPO_NAME/
           fi
           npm run build
@@ -54,8 +47,21 @@ jobs:
             node scripts/create-pages-fallback.mjs
           fi
 
-      - name: Deploy to GitHub Pages (gh-pages branch)
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
+          path: ./dist
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
